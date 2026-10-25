@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ConversationList } from './ConversationList';
 import { useAppStore } from '../../lib/store';
+import { BrandLogo } from '../BrandLogo';
 
 export function Sidebar() {
   const navigate = useNavigate();
@@ -93,6 +94,16 @@ export function Sidebar() {
         <div className="flex flex-col h-full w-[260px]">
           {/* Header */}
           <div className="flex items-center justify-between px-3 pt-3 pb-2">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 min-w-0 rounded-lg px-1 py-1 cursor-pointer"
+              aria-label="Go to Friday chat"
+            >
+              <BrandLogo />
+              <span className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>
+                Friday
+              </span>
+            </button>
             <button
               onClick={toggleSidebar}
               className="p-2 rounded-lg transition-colors cursor-pointer"
