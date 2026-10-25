@@ -7,7 +7,7 @@ import {
   FolderOpen,
   Loader2,
 } from 'lucide-react';
-import { SOURCE_CATALOG } from '../../types/connectors';
+import { formatFridayCopy, SOURCE_CATALOG } from '../../types/connectors';
 import { connectSource, getConnector } from '../../lib/connectors-api';
 import { getBase } from '../../lib/api';
 import type { ConnectRequest, ConnectorMeta } from '../../types/connectors';
@@ -231,7 +231,7 @@ function LocalPanel({
     <div className="flex flex-col gap-4">
       <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
         {displayName} reads data directly from your Mac. Make sure the app is installed and
-        Full Disk Access is granted to OpenJarvis in System Settings.
+        Full Disk Access is granted to Friday in System Settings.
       </p>
       <div
         className="px-4 py-3 rounded-lg text-sm"
@@ -241,7 +241,7 @@ function LocalPanel({
         }}
       >
         <strong>System Settings</strong> → Privacy &amp; Security → Full Disk Access →
-        enable OpenJarvis
+        enable Friday
       </div>
       <button
         onClick={() => onConnect({})}
@@ -360,7 +360,7 @@ function StepByStepPanel({
             color: 'var(--color-text)',
             fontSize: 13, marginBottom: step.url ? 6 : 0,
           }}>
-            {step.label}
+            {formatFridayCopy(step.label)}
           </div>
           {step.url && (
             <a

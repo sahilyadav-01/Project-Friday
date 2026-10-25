@@ -4,6 +4,13 @@ export interface SetupStep {
   urlLabel?: string;
 }
 
+export function formatFridayCopy(value: string): string {
+  return value
+    .replace(/OpenJarvis/g, 'Friday')
+    .replace(/Jarvis/g, 'Friday')
+    .replace(/jarvis/g, 'friday');
+}
+
 export interface ConnectorMeta {
   connector_id: string;
   display_name: string;
@@ -122,7 +129,7 @@ export const SOURCE_CATALOG: ConnectorMeta[] = [
     unitLabel: 'emails',
     steps: [
       {
-        label: 'Make sure 2-Step Verification is enabled, then generate a 16-character App Password (Mail / Other / "OpenJarvis"). Paste it below \u2014 spaces are fine, and use the app password, not your regular Gmail password.',
+        label: 'Make sure 2-Step Verification is enabled, then generate a 16-character App Password (Mail / Other / "Friday"). Paste it below \u2014 spaces are fine, and use the app password, not your regular Gmail password.',
         url: 'https://myaccount.google.com/apppasswords',
         urlLabel: 'How to get an app password \u2192',
       },
@@ -211,8 +218,8 @@ export const SOURCE_CATALOG: ConnectorMeta[] = [
       },
       {
         label: '(Optional) Set the app icon: in the left sidebar click "Basic Information" → scroll to "Display Information" → upload the OpenJarvis logo',
-        url: 'https://github.com/open-jarvis/OpenJarvis/blob/main/assets/openjarvis-slack-icon.jpg',
-        urlLabel: 'Download icon',
+        url: '/pwa-192x192.png',
+        urlLabel: 'Open Friday logo',
       },
     ],
     inputFields: [
@@ -304,7 +311,7 @@ export const SOURCE_CATALOG: ConnectorMeta[] = [
         label: 'Alternatively, open Finder → navigate to your vault folder (it contains a hidden .obsidian directory). Right-click the folder → "Copy as Pathname" to get the full path',
       },
       {
-        label: 'Paste the full path below. OpenJarvis will index all .md files in the vault',
+        label: 'Paste the full path below. Friday will index all .md files in the vault',
       },
     ],
     inputFields: [

@@ -18,14 +18,12 @@ import {
 } from 'lucide-react';
 import { isTauri, checkHealth } from '../lib/api';
 
-const GITHUB_BASE =
-  'https://github.com/open-jarvis/OpenJarvis/releases/latest/download';
+const GITHUB_RELEASES = 'https://github.com/open-jarvis/OpenJarvis/releases';
 
 interface Platform {
   id: string;
   label: string;
   shortLabel: string;
-  file: string;
   icon: typeof Apple;
 }
 
@@ -34,35 +32,30 @@ const PLATFORMS: Platform[] = [
     id: 'mac-arm',
     label: 'macOS (Apple Silicon)',
     shortLabel: 'macOS (Apple Silicon)',
-    file: 'OpenJarvis_aarch64.dmg',
     icon: Apple,
   },
   {
     id: 'mac-intel',
     label: 'macOS (Intel)',
     shortLabel: 'macOS (Intel)',
-    file: 'OpenJarvis_x64.dmg',
     icon: Apple,
   },
   {
     id: 'windows',
     label: 'Windows (64-bit)',
     shortLabel: 'Windows (64-bit)',
-    file: 'OpenJarvis_x64-setup.msi',
     icon: Monitor,
   },
   {
     id: 'linux-deb',
     label: 'Linux (DEB)',
     shortLabel: 'Linux (DEB)',
-    file: 'OpenJarvis_amd64.deb',
     icon: Terminal,
   },
   {
     id: 'linux-rpm',
     label: 'Linux (RPM)',
     shortLabel: 'Linux (RPM)',
-    file: 'OpenJarvis_x86_64.rpm',
     icon: Terminal,
   },
 ];
@@ -370,14 +363,16 @@ function SelfHostedView() {
           </p>
 
           <a
-            href={`${GITHUB_BASE}/${primary.file}`}
+            href={GITHUB_RELEASES}
+            target="_blank"
+            rel="noopener noreferrer"
             className="inline-flex items-center gap-2.5 px-6 py-3 rounded-xl text-sm font-medium transition-opacity cursor-pointer"
             style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
             onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.9')}
             onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
           >
             <Download size={18} />
-            Download for {primary.label}
+            View downloads for {primary.label}
           </a>
 
           <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
@@ -387,7 +382,9 @@ function SelfHostedView() {
             {others.map((p) => (
               <a
                 key={p.id}
-                href={`${GITHUB_BASE}/${p.file}`}
+                href={GITHUB_RELEASES}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-[11px] underline underline-offset-2 transition-colors"
                 style={{ color: 'var(--color-text-secondary)' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--color-accent)')}

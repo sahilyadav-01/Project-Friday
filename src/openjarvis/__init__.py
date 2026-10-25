@@ -10,7 +10,12 @@ if TYPE_CHECKING:
     from openjarvis.sdk import Jarvis, JarvisSystem, MemoryHandle, SystemBuilder
 
 try:
-    __version__ = _pkg_version("openjarvis")
+    __version__ = (
+        _pkg_version("openjarvis")
+        or _pkg_version("OpenJarvis")
+        or _pkg_version("friday")
+        or "0.0.0+unknown"
+    )
 except PackageNotFoundError:  # pragma: no cover — uninstalled source tree
     __version__ = "0.0.0+unknown"
 

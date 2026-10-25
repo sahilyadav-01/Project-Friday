@@ -26,7 +26,7 @@ and developer workflows.
 - Node.js 22 or newer for the browser GUI
 - Ollama or another configured inference server
 
-## Installation
+## Quick Start
 
 From the project directory:
 
@@ -34,11 +34,23 @@ From the project directory:
 uv sync
 ```
 
-Initialize a starter configuration and check the installation:
+Initialize Friday and check the installation:
 
 ```bash
-uv run friday init --preset chat-simple --force
+uv run friday init
 uv run friday doctor
+```
+
+Start a local chat:
+
+```bash
+uv run friday ask "What's on my calendar today?"
+```
+
+Expose an OpenAI-compatible local API:
+
+```bash
+uv run friday serve --port 8000
 ```
 
 ## Usage
@@ -54,6 +66,9 @@ Start the browser interface:
 ```bash
 uv run friday gui
 ```
+
+Desktop builds are available on the
+[GitHub Releases page](https://github.com/open-jarvis/OpenJarvis/releases).
 
 Useful commands:
 
@@ -99,7 +114,7 @@ npm run build
 
 ## Project Layout
 
-- `src/` — Friday Python backend and CLI
+- `src/` - Friday Python backend and CLI
 - `frontend/` — browser interface
 - `rust/` — native performance extensions
 - `configs/` — assistant and persona configuration
@@ -111,4 +126,4 @@ npm run build
 Friday is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for
 details.
 
-Copyright © 2026 Sahil Yadav. All rights reserved.
+Copyright (c) 2026 Sahil Yadav. All rights reserved.
