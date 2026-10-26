@@ -94,6 +94,7 @@ function saveConversations(store: ConversationStore): void {
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 interface Settings {
+  userName?: string;
   theme: ThemeMode;
   apiUrl: string;
   // Local server API key (OPENJARVIS_API_KEY). Sent as a Bearer token on
@@ -129,6 +130,7 @@ function safeStorageSet(key: string, value: string): void {
 
 function loadSettings(): Settings {
   const defaults: Settings = {
+    userName: 'Sahil Yadav',
     theme: 'system',
     apiUrl: '',
     apiKey: '',
