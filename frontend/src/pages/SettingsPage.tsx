@@ -17,8 +17,10 @@ import {
   Search,
   Brain,
   RefreshCw,
+  Volume2,
 } from 'lucide-react';
 import { useAppStore, type ThemeMode } from '../lib/store';
+import { useTtsStore } from '../lib/tts';
 import {
   checkHealth,
   fetchSpeechHealth,
@@ -294,6 +296,16 @@ export function SettingsPage() {
   const [speechBackendAvailable, setSpeechBackendAvailable] = useState<boolean | null>(null);
   const [ttsBackend, setTtsBackend] = useState<{ available: boolean; backend?: string; voice_id?: string } | null>(null);
   const [saved, setSaved] = useState(false);
+  const [isTestingVoice, setIsTestingVoice] = useState(false);
+
+  const handleTestVoice = useCallback(async () => {
+    setIsTestingVoice(true);
+    try {
+      await useTtsStore.getState().speak('settings-test', 'Hello, boss. Friday voice assistant is online and ready.');
+    } finally {
+      setIsTestingVoice(false);
+    }
+  }, []);
 
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => !isAutoUpdateDisabled());
   const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
@@ -838,7 +850,46 @@ export function SettingsPage() {
                 />
               </button>
             </SettingRow>
-            <SettingRow label="Voice" description="Backend and voice used for spoken replies">
+            <SettingRow label="Voice Profile" description="Select voice assistant persona (Girl/Female voices recommended for F.R.I.D.A.Y.)">
+              <div className="flex items-center gap-2">
+                <select
+                  value={settings.voiceId || 'en-IE-EmilyNeural'}
+                  onChange={(e) => {
+                    updateSettings({ voiceId: e.target.value });
+                    showSaved();
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg text-xs outline-none cursor-pointer"
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--color-border)',
+                    color: 'var(--color-text)',
+                  }}
+                >
+                  <option value="en-IE-EmilyNeural">F.R.I.D.A.Y. (Irish Female - Default)</option>
+                  <option value="en-US-AriaNeural">Aria (US Female)</option>
+                  <option value="en-US-JennyNeural">Jenny (US Female)</option>
+                  <option value="en-GB-SoniaNeural">Sonia (British Female)</option>
+                  <option value="af_heart">Kokoro Heart (Female)</option>
+                  <option value="nova">OpenAI Nova (Female)</option>
+                  <option value="en-US-GuyNeural">Guy (US Male)</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleTestVoice}
+                  disabled={isTestingVoice}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-sm disabled:opacity-50"
+                  style={{
+                    background: 'var(--color-accent)',
+                    color: 'white',
+                  }}
+                  title="Test voice audio"
+                >
+                  <Volume2 size={13} className={isTestingVoice ? 'animate-bounce' : ''} />
+                  {isTestingVoice ? 'Speaking...' : 'Test Voice'}
+                </button>
+              </div>
+            </SettingRow>
+            <SettingRow label="Voice Backend" description="Backend and voice used for spoken replies">
               <div className="flex items-center gap-2">
                 <span
                   className="w-2 h-2 rounded-full"

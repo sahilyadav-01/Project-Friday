@@ -17,25 +17,40 @@ export const isTauri = () => typeof window !== 'undefined' && !!window.__TAURI_I
 export type CloudKeyStatus = Record<string, boolean>;
 
 export async function getCloudKeyStatus(): Promise<CloudKeyStatus> {
-  if (!isTauri()) return {};
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    const rows = await invoke<Array<{ key: string; set: boolean }>>('get_cloud_key_status');
-    return Object.fromEntries(rows.map((row) => [row.key, row.set]));
-  } catch (e: any) {
-    throw new Error(e?.message ?? e ?? 'Failed to read cloud key status');
+  if (isTauri()) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const rows = await invoke<Array<{ key: string; set: boolean }>>('get_cloud_key_status');
+      return Object.fromEntries(rows.map((row) => [row.key, row.set]));
+    } catch {
+      // Fall through to server endpoint
+    }
   }
+  try {
+    const res = await apiFetch('/v1/keys/status');
+    if (res.ok) return await res.json();
+  } catch {}
+  return {};
 }
 
 export async function saveCloudKey(keyName: string, keyValue: string): Promise<void> {
-  if (!isTauri()) {
-    throw new Error('Cloud API keys can be saved in the desktop app only.');
+  if (isTauri()) {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('save_cloud_key', { keyName, keyValue });
+      return;
+    } catch {
+      // Fall through to server endpoint
+    }
   }
-  try {
-    const { invoke } = await import('@tauri-apps/api/core');
-    await invoke('save_cloud_key', { keyName, keyValue });
-  } catch (e: any) {
-    throw new Error(e?.message ?? e ?? 'Failed to save cloud key');
+  const res = await apiFetch('/v1/keys', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: keyName, value: keyValue }),
+  });
+  if (!res.ok) {
+    const detail = await getErrorDetail(res, 'Failed to save cloud key');
+    throw new Error(detail);
   }
 }
 
@@ -198,6 +213,21 @@ export async function fetchRecommendedModel(): Promise<{ model: string; reason: 
   return res.json();
 }
 
+export async function getErrorDetail(res: Response, fallback = 'Request failed'): Promise<string> {
+  try {
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      if (typeof data.detail === 'string') return data.detail;
+      if (typeof data.message === 'string') return data.message;
+      if (typeof data.error === 'string') return data.error;
+    } catch {
+      if (text.trim()) return text;
+    }
+  } catch {}
+  return res.statusText || fallback;
+}
+
 export async function pullModel(modelName: string): Promise<void> {
   // In Tauri, go through the Rust backend directly (avoids CORS / timeout
   // issues with long model downloads via fetch).
@@ -216,8 +246,8 @@ export async function pullModel(modelName: string): Promise<void> {
     body: JSON.stringify({ model: modelName }),
   });
   if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to pull model: ${detail}`);
+    const detail = await getErrorDetail(res, 'Failed to pull model');
+    throw new Error(detail);
   }
 }
 
@@ -235,8 +265,8 @@ export async function deleteModel(modelName: string): Promise<void> {
     method: 'DELETE',
   });
   if (!res.ok) {
-    const detail = await res.text().catch(() => res.statusText);
-    throw new Error(`Failed to delete model: ${detail}`);
+    const detail = await getErrorDetail(res, 'Failed to delete model');
+    throw new Error(detail);
   }
 }
 

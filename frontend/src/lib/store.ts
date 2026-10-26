@@ -108,6 +108,23 @@ interface Settings {
   speechEnabled: boolean;
   voiceOutputEnabled: boolean;
   voiceAutoplay: boolean;
+  voiceId: string;
+}
+
+function safeStorageGet(key: string): string | null {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeStorageSet(key: string, value: string): void {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, value);
+    }
+  } catch {}
 }
 
 function loadSettings(): Settings {
@@ -123,9 +140,10 @@ function loadSettings(): Settings {
     speechEnabled: false,
     voiceOutputEnabled: false,
     voiceAutoplay: false,
+    voiceId: 'en-IE-EmilyNeural',
   };
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
+    const raw = safeStorageGet(SETTINGS_KEY);
     if (!raw) return defaults;
     return { ...defaults, ...JSON.parse(raw) };
   } catch {
@@ -134,7 +152,7 @@ function loadSettings(): Settings {
 }
 
 function saveSettings(settings: Settings): void {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  safeStorageSet(SETTINGS_KEY, JSON.stringify(settings));
 }
 
 // ── Store ─────────────────────────────────────────────────────────────
@@ -292,11 +310,11 @@ export const useAppStore = create<AppState>((set, get) => {
     sidebarOpen: true,
     systemPanelOpen: true,
 
-    optInEnabled: localStorage.getItem(OPTIN_KEY) === 'true',
-    optInDisplayName: localStorage.getItem(OPTIN_NAME_KEY) || '',
-    optInEmail: localStorage.getItem(OPTIN_EMAIL_KEY) || '',
-    optInAnonId: localStorage.getItem(OPTIN_ANONID_KEY) || crypto.randomUUID(),
-    optInModalSeen: localStorage.getItem(OPTIN_SEEN_KEY) === 'true',
+    optInEnabled: safeStorageGet(OPTIN_KEY) === 'true',
+    optInDisplayName: safeStorageGet(OPTIN_NAME_KEY) || '',
+    optInEmail: safeStorageGet(OPTIN_EMAIL_KEY) || '',
+    optInAnonId: safeStorageGet(OPTIN_ANONID_KEY) || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'default-anon-id'),
+    optInModalSeen: safeStorageGet(OPTIN_SEEN_KEY) === 'true',
     optInModalOpen: false,
 
     // ── Conversations ───────────────────────────────────────────────
@@ -591,15 +609,15 @@ export const useAppStore = create<AppState>((set, get) => {
 
     setOptIn: (enabled: boolean, displayName: string, email: string) => {
       const anonId = get().optInAnonId;
-      localStorage.setItem(OPTIN_KEY, String(enabled));
-      localStorage.setItem(OPTIN_NAME_KEY, displayName);
-      localStorage.setItem(OPTIN_EMAIL_KEY, email);
-      localStorage.setItem(OPTIN_ANONID_KEY, anonId);
+      safeStorageSet(OPTIN_KEY, String(enabled));
+      safeStorageSet(OPTIN_NAME_KEY, displayName);
+      safeStorageSet(OPTIN_EMAIL_KEY, email);
+      safeStorageSet(OPTIN_ANONID_KEY, anonId);
       set({ optInEnabled: enabled, optInDisplayName: displayName, optInEmail: email });
     },
     setOptInModalOpen: (open: boolean) => set({ optInModalOpen: open }),
     markOptInModalSeen: () => {
-      localStorage.setItem(OPTIN_SEEN_KEY, 'true');
+      safeStorageSet(OPTIN_SEEN_KEY, 'true');
       set({ optInModalSeen: true });
     },
   };

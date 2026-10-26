@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { synthesizeSpeech, fetchTtsHealth } from './api';
 import { toSpeakableText } from './message-text';
+import { useAppStore } from './store';
 
 export type TtsState = 'idle' | 'loading' | 'speaking';
 
@@ -36,6 +37,39 @@ let controller: AbortController | null = null;
 let token = 0;
 let healthProbe: Promise<void> | null = null;
 
+function speakBrowserFemaleVoice(
+  text: string,
+  onEnd: () => void,
+  onError: (err: unknown) => void,
+): boolean {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const voices = window.speechSynthesis.getVoices();
+    // Prioritize natural female voices: Irish (Emily / Friday), US/UK female voices
+    const femaleVoice =
+      voices.find((v) => /emily|ireland|irish/i.test(v.name) || /en[-_]ie/i.test(v.lang)) ||
+      voices.find((v) => /zira|aria|jenny|samantha|victoria|susan|karen|female/i.test(v.name)) ||
+      voices.find((v) => v.lang.startsWith('en') && /female/i.test(v.name)) ||
+      voices.find((v) => v.lang.startsWith('en'));
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
+    }
+    utterance.pitch = 1.05;
+    utterance.rate = 1.0;
+    utterance.onend = onEnd;
+    utterance.onerror = (e) => {
+      if (e.error === 'canceled' || e.error === 'interrupted') return;
+      onError(e);
+    };
+    window.speechSynthesis.speak(utterance);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Only a stream ending in the active conversation may trigger autoplay. */
 export function shouldAutoplayFinishedReply(
   previousStreamingConversationId: string | null,
@@ -54,10 +88,6 @@ export function shouldAutoplayFinishedReply(
 
 function teardown(): void {
   if (audio) {
-    // Detach first: clearing src re-runs the media load algorithm, which fails
-    // on an empty source and dispatches an `error` event. With the handler
-    // still attached that surfaces as a bogus "Playback failed" after every
-    // successful utterance.
     audio.onended = null;
     audio.onerror = null;
     audio.pause();
@@ -71,6 +101,13 @@ function teardown(): void {
   if (controller) {
     controller.abort();
     controller = null;
+  }
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch {
+      // Ignore
+    }
   }
 }
 
@@ -86,12 +123,14 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     if (healthProbe) return healthProbe;
     healthProbe = fetchTtsHealth()
       .then((health) => {
-        set({ available: health.available });
-        if (!health.available) healthProbe = null;
+        const hasBrowserSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
+        set({ available: health.available || hasBrowserSpeech });
+        if (!health.available && !hasBrowserSpeech) healthProbe = null;
       })
       .catch(() => {
-        set({ available: false });
-        healthProbe = null;
+        const hasBrowserSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
+        set({ available: hasBrowserSpeech });
+        if (!hasBrowserSpeech) healthProbe = null;
       });
     return healthProbe;
   },
@@ -112,8 +151,40 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     const ac = new AbortController();
     controller = ac;
 
+    const voiceId = useAppStore.getState?.()?.settings?.voiceId || 'en-IE-EmilyNeural';
+
     try {
-      const blob = await synthesizeSpeech(trimmed, { signal: ac.signal });
+      let blob: Blob;
+      try {
+        blob = await synthesizeSpeech(trimmed, { signal: ac.signal, voiceId });
+      } catch (backendErr) {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          const spoken = speakBrowserFemaleVoice(
+            trimmed,
+            () => {
+              if (mine !== token) return;
+              teardown();
+              set({ state: 'idle', speakingId: null });
+            },
+            () => {
+              if (mine !== token) return;
+              teardown();
+              set({
+                state: 'idle',
+                speakingId: null,
+                error: backendErr instanceof Error ? backendErr.message : 'Speech synthesis failed',
+                errorId: id,
+              });
+            },
+          );
+          if (spoken) {
+            if (mine === token) set({ state: 'speaking', speakingId: id });
+            return;
+          }
+        }
+        throw backendErr;
+      }
+
       if (mine !== token) return;
 
       const url = URL.createObjectURL(blob);

@@ -196,16 +196,20 @@ export function InputArea() {
   const sendMessage = useCallback(async () => {
     const content = input.trim();
     if (!content || streamState.isStreaming) return;
-    if (!selectedModel) {
-      toast.error('Pick a model first (⌘K)');
+    const targetModel = selectedModel || effectiveModel;
+    if (!targetModel) {
+      toast.error(pickModelText);
       return;
+    }
+    if (!selectedModel && targetModel) {
+      setSelectedModel(targetModel);
     }
 
     setInput('');
 
     let convId = activeId;
     if (!convId) {
-      convId = createConversation(selectedModel);
+      convId = createConversation(targetModel);
     }
 
     const userMsg: ChatMessage = {
@@ -268,14 +272,14 @@ export function InputArea() {
       category: 'chat',
       message: deepResearch
         ? `Research: "${content.slice(0, 80)}${content.length > 80 ? '...' : ''}"`
-        : `Request: "${content.slice(0, 80)}${content.length > 80 ? '...' : ''}" → ${selectedModel}`,
+        : `Request: "${content.slice(0, 80)}${content.length > 80 ? '...' : ''}" → ${targetModel}`,
     });
 
     try {
       if (deepResearch) {
         for await (const ev of streamResearch(
           content,
-          selectedModel,
+          targetModel,
           controller.signal,
         )) {
           if (ev.type === 'search_call') {
@@ -398,7 +402,7 @@ export function InputArea() {
         }
       } else {
       for await (const sseEvent of streamChat(
-        { model: selectedModel, messages: apiMessages, stream: true, temperature, max_tokens: maxTokens },
+        { model: targetModel, messages: apiMessages, stream: true, temperature, max_tokens: maxTokens },
         controller.signal,
       )) {
         const eventName = sseEvent.event;
@@ -409,7 +413,7 @@ export function InputArea() {
           setStreamState({ phase: 'Generating...' });
           useAppStore.getState().addLogEntry({
             timestamp: Date.now(), level: 'info', category: 'chat',
-            message: `Generating with ${selectedModel}...`,
+            message: `Generating with ${targetModel}...`,
           });
         } else if (eventName === 'tool_call_start') {
           try {
@@ -497,16 +501,16 @@ export function InputArea() {
       }
       const totalMs = Date.now() - startTime;
       const appState = useAppStore.getState();
-      const selectedOwner = appState.models.find((m) => m.id === selectedModel)?.owned_by;
+      const selectedOwner = appState.models.find((m) => m.id === targetModel)?.owned_by;
       const engineLabel = resolveChatEngine({
         routedEngine,
         serverEngine: appState.serverInfo?.engine,
-        selectedModel,
+        selectedModel: targetModel,
         selectedOwner,
       });
       const telemetry: MessageTelemetry = {
         engine: engineLabel,
-        model_id: selectedModel,
+        model_id: targetModel,
         total_ms: totalMs,
         ttft_ms: ttftMs,
         tokens_per_sec: usage?.completion_tokens
@@ -565,6 +569,9 @@ export function InputArea() {
     input,
     activeId,
     selectedModel,
+    effectiveModel,
+    pickModelText,
+    setSelectedModel,
     streamState.isStreaming,
     createConversation,
     addMessage,
@@ -630,7 +637,7 @@ export function InputArea() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={selectedModel ? 'Message Friday...' : 'Pick a model first (⌘K)...'}
+          placeholder={effectiveModel ? 'Message Friday...' : `${pickModelText}...`}
           rows={1}
           className="flex-1 bg-transparent outline-none resize-none text-sm leading-relaxed"
           style={{ color: 'var(--color-text)', maxHeight: '200px' }}
@@ -655,8 +662,8 @@ export function InputArea() {
             />
             <button
               onClick={sendMessage}
-              disabled={streamState.isStreaming || !input.trim() || modelLoading || !selectedModel}
-              title={selectedModel ? 'Send message' : 'Pick a model first (⌘K)'}
+              disabled={streamState.isStreaming || !input.trim() || modelLoading || !effectiveModel}
+              title={effectiveModel ? 'Send message' : pickModelText}
               className="p-2 rounded-xl transition-colors shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-default"
               style={{
                 background: input.trim() ? 'var(--color-accent)' : 'var(--color-bg-tertiary)',

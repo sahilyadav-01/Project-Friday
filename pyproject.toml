@@ -90,6 +90,7 @@ server = [
     "uvicorn>=0.30",
     "pydantic>=2.0",
     "python-multipart>=0.0.9",
+    "edge-tts>=7.0.0",
 ]
 desktop = [
     "fastapi>=0.110",
@@ -111,6 +112,7 @@ desktop = [
 # Local neural TTS. Kokoro pulls spacy/misaki for G2P; espeak-ng must also be
 # present on PATH (brew install espeak-ng) for out-of-dictionary words.
 voice = [
+    "edge-tts>=7.0.0",
     "kokoro>=0.9",
     "soundfile>=0.12",
     "sounddevice>=0.5",  # play_wav / record_until_silence in speech/voice_io.py

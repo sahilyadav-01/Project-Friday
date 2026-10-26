@@ -1141,6 +1141,23 @@ async def list_models(request: Request) -> ModelListResponse:
     # the UI auto-select nomic-embed-text and fail every generation with 400.
     model_ids = [m for m in model_ids if not is_embed_only_model(m)]
 
+    # Also include configured cloud provider models if keys are set
+    from openjarvis.server.cloud_router import _load_keys
+    cloud_keys = _load_keys()
+    cloud_models: list[str] = []
+    if cloud_keys.get("OPENAI_API_KEY"):
+        cloud_models.extend(["gpt-4o", "gpt-4o-mini", "o3-mini"])
+    if cloud_keys.get("GEMINI_API_KEY") or cloud_keys.get("GOOGLE_API_KEY"):
+        cloud_models.extend(["gemini-2.5-flash", "gemini-2.5-pro", "gemini-1.5-flash"])
+    if cloud_keys.get("ANTHROPIC_API_KEY"):
+        cloud_models.extend(["claude-sonnet-4-6", "claude-haiku-4-5"])
+    if cloud_keys.get("OPENROUTER_API_KEY"):
+        cloud_models.extend(["openrouter/auto"])
+
+    for cm in cloud_models:
+        if cm not in model_ids:
+            model_ids.append(cm)
+
     return ModelListResponse(
         data=[
             ModelObject(
@@ -1148,6 +1165,8 @@ async def list_models(request: Request) -> ModelListResponse:
                 owned_by=(
                     "litellm"
                     if _engine_key_for_model(engine, mid) == "litellm"
+                    else "cloud"
+                    if is_cloud_model(mid)
                     else "openjarvis"
                 ),
             )
@@ -1159,23 +1178,43 @@ async def list_models(request: Request) -> ModelListResponse:
 @router.post("/v1/models/pull")
 async def pull_model(request: Request):
     """Pull / download a model from the Ollama registry."""
-    body = await request.json()
-    model_name = body.get("model", "").strip()
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    model_name = body.get("model", "").strip() if isinstance(body, dict) else ""
     if not model_name:
         raise HTTPException(status_code=400, detail="'model' field is required")
 
-    engine = request.app.state.engine
+    engine = getattr(request.app.state, "engine", None)
     engine_name = getattr(request.app.state, "engine_name", "")
-    # Only Ollama supports pulling
-    if engine_name != "ollama" and getattr(engine, "engine_id", "") != "ollama":
-        raise HTTPException(
-            status_code=501,
-            detail="Model pulling is only supported with the Ollama engine",
-        )
+    host = getattr(engine, "_host", "http://localhost:11434")
 
     import httpx as _httpx
 
-    host = getattr(engine, "_host", "http://localhost:11434")
+    # If the active engine is not Ollama, check if local Ollama daemon is reachable
+    if engine_name != "ollama" and getattr(engine, "engine_id", "") != "ollama":
+        can_use_ollama = False
+        try:
+            async with _httpx.AsyncClient(base_url="http://localhost:11434", timeout=1.5) as client:
+                resp = await client.get("/api/tags")
+                if resp.status_code == 200:
+                    can_use_ollama = True
+                    host = "http://localhost:11434"
+        except Exception:
+            can_use_ollama = False
+
+        if not can_use_ollama:
+            configured_model = getattr(engine, "model", getattr(request.app.state, "model", "active"))
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Downloading local models requires Ollama to be running on your system. "
+                    f"Your Friday server is currently powered by the '{engine_name or 'cloud'}' engine "
+                    f"with model '{configured_model}'."
+                ),
+            )
+
     try:
         async with _httpx.AsyncClient(base_url=host, timeout=600.0) as client:
             resp = await client.post(
@@ -1197,14 +1236,29 @@ async def pull_model(request: Request):
 @router.delete("/v1/models/{model_name:path}")
 async def delete_model(model_name: str, request: Request):
     """Delete a model from Ollama."""
-    engine = request.app.state.engine
+    engine = getattr(request.app.state, "engine", None)
     engine_name = getattr(request.app.state, "engine_name", "")
-    if engine_name != "ollama" and getattr(engine, "engine_id", "") != "ollama":
-        raise HTTPException(status_code=501, detail="Only supported with Ollama engine")
+    host = getattr(engine, "_host", "http://localhost:11434")
 
     import httpx as _httpx
 
-    host = getattr(engine, "_host", "http://localhost:11434")
+    if engine_name != "ollama" and getattr(engine, "engine_id", "") != "ollama":
+        can_use_ollama = False
+        try:
+            async with _httpx.AsyncClient(base_url="http://localhost:11434", timeout=1.5) as client:
+                resp = await client.get("/api/tags")
+                if resp.status_code == 200:
+                    can_use_ollama = True
+                    host = "http://localhost:11434"
+        except Exception:
+            can_use_ollama = False
+
+        if not can_use_ollama:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Deleting local models is only supported with the Ollama engine.",
+            )
+
     try:
         async with _httpx.AsyncClient(base_url=host, timeout=30.0) as client:
             resp = await client.request(
@@ -1221,7 +1275,51 @@ async def delete_model(model_name: str, request: Request):
             detail=f"Ollama error: {exc.response.text[:300]}",
         )
 
-    return {"status": "deleted", "model": model_name}
+@router.get("/v1/keys/status")
+async def get_keys_status():
+    """Return status of configured cloud provider API keys."""
+    from openjarvis.server.cloud_router import _load_keys
+    keys = _load_keys()
+    return {
+        "OPENAI_API_KEY": bool(keys.get("OPENAI_API_KEY")),
+        "GEMINI_API_KEY": bool(keys.get("GEMINI_API_KEY") or keys.get("GOOGLE_API_KEY")),
+        "ANTHROPIC_API_KEY": bool(keys.get("ANTHROPIC_API_KEY")),
+        "OPENROUTER_API_KEY": bool(keys.get("OPENROUTER_API_KEY")),
+        "ATLASCLOUD_API_KEY": bool(keys.get("ATLASCLOUD_API_KEY")),
+    }
+
+
+@router.post("/v1/keys")
+async def save_key(request: Request):
+    """Save or remove a cloud provider API key."""
+    import os
+    body = await request.json()
+    key_name = body.get("key", "").strip() if isinstance(body, dict) else ""
+    key_value = body.get("value", "").strip() if isinstance(body, dict) else ""
+    if not key_name:
+        raise HTTPException(status_code=400, detail="'key' is required")
+
+    from openjarvis.core.paths import get_config_dir
+    keys_path = get_config_dir() / "cloud-keys.env"
+    keys_path.parent.mkdir(parents=True, exist_ok=True)
+    lines: list[str] = []
+    if keys_path.exists():
+        for line in keys_path.read_text(encoding="utf-8").splitlines():
+            s = line.strip()
+            if s and not s.startswith(f"{key_name}="):
+                lines.append(s)
+    if key_value:
+        lines.append(f"{key_name}={key_value}")
+        os.environ[key_name] = key_value
+        if key_name == "GEMINI_API_KEY":
+            os.environ["GOOGLE_API_KEY"] = key_value
+    else:
+        os.environ.pop(key_name, None)
+        if key_name == "GEMINI_API_KEY":
+            os.environ.pop("GOOGLE_API_KEY", None)
+
+    keys_path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    return {"status": "ok", "key": key_name, "set": bool(key_value)}
 
 
 @router.post("/v1/cloud/reload")

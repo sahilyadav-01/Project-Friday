@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff } from 'lucide-react';
+import { Search, Cpu, X, Download, Loader2, Trash2, Check, Cloud, Key, Eye, EyeOff, Info } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import {
   pullModel,
@@ -105,27 +105,40 @@ export function CommandPalette() {
   const setSelectedModel = useAppStore((s) => s.setSelectedModel);
   const setModels = useAppStore((s) => s.setModels);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
+  const serverInfo = useAppStore((s) => s.serverInfo);
 
-  const installedIds = new Set(models.map((m) => m.id));
-  const desktopKeyStorage = isTauri();
+  // If models list from store hasn't loaded yet or is empty, use serverInfo.model as an active fallback model
+  const effectiveInstalledModels =
+    models.length > 0
+      ? models
+      : serverInfo?.model
+      ? [{ id: serverInfo.model, owned_by: serverInfo.engine || 'openjarvis' }]
+      : [];
+
+  const installedIds = new Set(effectiveInstalledModels.map((m) => m.id));
+
+  const refreshModels = useCallback(async () => {
+    try {
+      const m = await fetchModels();
+      if (m && m.length > 0) {
+        setModels(m);
+      }
+    } catch {}
+  }, [setModels]);
 
   const refreshCloudKeyStatus = useCallback(async () => {
-    if (!desktopKeyStorage) {
-      setCloudKeyStatus({});
-      return;
-    }
     try {
       setCloudKeyStatus(await getCloudKeyStatus());
       setCloudKeyError(null);
     } catch (e: any) {
       setCloudKeyError(e?.message || 'Failed to read cloud key status');
     }
-  }, [desktopKeyStorage]);
+  }, []);
 
   const filtered = tab === 'installed'
     ? (query
-        ? models.filter((m) => m.id.toLowerCase().includes(query.toLowerCase()))
-        : models)
+        ? effectiveInstalledModels.filter((m) => m.id.toLowerCase().includes(query.toLowerCase()))
+        : effectiveInstalledModels)
     : tab === 'catalogue'
     ? CATALOGUE_MODELS.filter((m) =>
         !installedIds.has(m.id) &&
@@ -135,11 +148,22 @@ export function CommandPalette() {
 
   useEffect(() => {
     inputRef.current?.focus();
-  }, []);
+    void refreshModels();
+  }, [refreshModels]);
 
   useEffect(() => {
     void refreshCloudKeyStatus();
   }, [refreshCloudKeyStatus]);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setCommandPaletteOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [setCommandPaletteOpen]);
 
   useEffect(() => {
     setSelectedIdx(0);
@@ -170,13 +194,6 @@ export function CommandPalette() {
         setModelLoading(false);
       }
     }
-  };
-
-  const refreshModels = async () => {
-    try {
-      const m = await fetchModels();
-      setModels(m);
-    } catch {}
   };
 
   const handlePull = async (modelId: string) => {
@@ -270,7 +287,7 @@ export function CommandPalette() {
   };
 
   const TAB_LABELS: Record<Tab, string> = {
-    installed: `Installed Models (${models.length})`,
+    installed: `Installed Models (${effectiveInstalledModels.length})`,
     catalogue: 'Download',
     cloud: 'Cloud Models',
   };
@@ -291,22 +308,35 @@ export function CommandPalette() {
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Tabs */}
-        <div className="flex" style={{ borderBottom: '1px solid var(--color-border)' }}>
-          {(['installed', 'catalogue', 'cloud'] as Tab[]).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className="flex-1 px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer"
-              style={{
-                color: tab === t ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
-                borderBottom: tab === t ? '2px solid var(--color-accent)' : '2px solid transparent',
-                background: 'transparent',
-              }}
-            >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
+        {/* Header Tabs with always-visible Close Button */}
+        <div className="flex items-center justify-between" style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <div className="flex flex-1">
+            {(['installed', 'catalogue', 'cloud'] as Tab[]).map((t) => (
+              <button
+                key={t}
+                onClick={() => {
+                  setTab(t);
+                  setPullError(null);
+                }}
+                className="flex-1 px-3 py-2.5 text-xs font-medium transition-colors cursor-pointer"
+                style={{
+                  color: tab === t ? 'var(--color-accent)' : 'var(--color-text-tertiary)',
+                  borderBottom: tab === t ? '2px solid var(--color-accent)' : '2px solid transparent',
+                  background: 'transparent',
+                }}
+              >
+                {TAB_LABELS[t]}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setCommandPaletteOpen(false)}
+            className="p-2 mr-2 rounded-lg cursor-pointer transition-colors hover:bg-[var(--color-bg-secondary)]"
+            style={{ color: 'var(--color-text-tertiary)' }}
+            title="Close (Esc)"
+          >
+            <X size={16} />
+          </button>
         </div>
 
         {/* Search (not for cloud tab) */}
@@ -326,23 +356,29 @@ export function CommandPalette() {
               className="flex-1 bg-transparent outline-none text-sm"
               style={{ color: 'var(--color-text)' }}
             />
-            <button
-              onClick={() => setCommandPaletteOpen(false)}
-              className="p-1 rounded cursor-pointer"
-              style={{ color: 'var(--color-text-tertiary)' }}
-            >
-              <X size={16} />
-            </button>
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="p-1 rounded cursor-pointer"
+                style={{ color: 'var(--color-text-tertiary)' }}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         )}
 
-        {/* Status messages */}
-        {pullError && (
-          <div className="px-4 py-2 text-xs" style={{ color: 'var(--color-error)', background: 'rgba(220,38,38,0.05)' }}>
-            {pullError}
+        {/* Status messages (strictly scoped to Download tab) */}
+        {tab === 'catalogue' && pullError && (
+          <div className="px-4 py-2.5 text-xs flex items-center justify-between gap-2" style={{ color: 'var(--color-error)', background: 'rgba(220,38,38,0.06)' }}>
+            <span className="flex-1 leading-relaxed">{pullError}</span>
+            <button onClick={() => setPullError(null)} className="p-1 rounded cursor-pointer shrink-0 hover:opacity-75" title="Dismiss">
+              <X size={14} />
+            </button>
           </div>
         )}
-        {pullSuccess && (
+        {tab === 'catalogue' && pullSuccess && (
           <div className="px-4 py-2 text-xs flex items-center gap-1.5" style={{ color: 'var(--color-success)', background: 'color-mix(in srgb, var(--color-success) 5%, transparent)' }}>
             <Check size={12} /> Downloaded {pullSuccess} successfully
           </div>
@@ -358,13 +394,14 @@ export function CommandPalette() {
           {tab === 'installed' ? (
             filtered.length === 0 ? (
               <div className="px-4 py-6 text-center text-sm" style={{ color: 'var(--color-text-tertiary)' }}>
-                {models.length === 0
+                {effectiveInstalledModels.length === 0
                   ? 'No models available — switch to "Download" to get started'
                   : 'No matching models'}
               </div>
             ) : (
-              (filtered as typeof models).map((model, idx) => {
-                const isActive = model.id === selectedModel;
+              (filtered as typeof effectiveInstalledModels).map((model, idx) => {
+                const activeModelId = selectedModel || serverInfo?.model;
+                const isActive = model.id === activeModelId;
                 const isSelected = idx === selectedIdx;
                 const isDeleting = deleting === model.id;
                 return (
@@ -414,9 +451,57 @@ export function CommandPalette() {
             )
           ) : tab === 'catalogue' ? (
             <>
+              {serverInfo?.engine && serverInfo.engine !== 'ollama' && (
+                <div
+                  className="mx-4 my-2.5 p-3.5 rounded-xl text-xs flex flex-col gap-2.5"
+                  style={{
+                    background: 'var(--color-bg-secondary)',
+                    border: '1px solid var(--color-border)',
+                  }}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <Info size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--color-accent)' }} />
+                    <div className="flex-1 space-y-1">
+                      <div className="font-medium text-sm" style={{ color: 'var(--color-text)' }}>
+                        Connected to <span className="font-semibold text-emerald-500">{serverInfo.model || '01-ai/yi-large'}</span>
+                      </div>
+                      <div className="leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+                        Your Friday server is already running with the <strong>{serverInfo.engine.toUpperCase()}</strong> engine. You do not need to download local models — you are ready to chat right now!
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-2 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                    <button
+                      onClick={() => handleSelect(serverInfo.model || '01-ai/yi-large')}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition-transform active:scale-95 flex items-center gap-1.5 shadow-sm"
+                      style={{
+                        background: 'var(--color-accent)',
+                        color: 'var(--color-on-accent)',
+                      }}
+                    >
+                      <Check size={13} /> Chat with {serverInfo.model || '01-ai/yi-large'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setTab('installed');
+                        setPullError(null);
+                      }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors"
+                      style={{
+                        background: 'var(--color-bg-tertiary)',
+                        color: 'var(--color-text)',
+                        border: '1px solid var(--color-border)',
+                      }}
+                    >
+                      View Installed Models
+                    </button>
+                  </div>
+                </div>
+              )}
               {(filtered as typeof CATALOGUE_MODELS).map((model) => {
                 const isPulling = pulling === model.id;
                 const justInstalled = pullSuccess === model.id;
+                const notOllama = !!(serverInfo?.engine && serverInfo.engine !== 'ollama');
                 return (
                   <div key={model.id} className="flex items-center gap-3 w-full px-4 py-2.5">
                     <Download size={16} style={{ color: 'var(--color-text-tertiary)' }} />
@@ -427,15 +512,26 @@ export function CommandPalette() {
                     <button
                       onClick={() => handlePull(model.id)}
                       disabled={isPulling || !!pulling}
-                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium cursor-pointer transition-colors"
                       style={{
-                        background: justInstalled ? 'var(--color-accent-subtle)' : 'var(--color-accent)',
-                        color: justInstalled ? 'var(--color-accent)' : 'var(--color-on-accent)',
+                        background: justInstalled
+                          ? 'var(--color-accent-subtle)'
+                          : notOllama
+                          ? 'var(--color-bg-tertiary)'
+                          : 'var(--color-accent)',
+                        color: justInstalled
+                          ? 'var(--color-accent)'
+                          : notOllama
+                          ? 'var(--color-text-secondary)'
+                          : 'var(--color-on-accent)',
+                        border: notOllama ? '1px solid var(--color-border)' : 'none',
                         opacity: (isPulling || (pulling && !isPulling)) ? 0.5 : 1,
                       }}
+                      title={notOllama ? 'Requires Ollama to download' : 'Download model'}
                     >
                       {isPulling ? <><Loader2 size={12} className="animate-spin" /> Downloading...</> :
                        justInstalled ? <><Check size={12} /> Installed</> :
+                       notOllama ? <><Download size={12} /> Requires Ollama</> :
                        <><Download size={12} /> Download</>}
                     </button>
                   </div>
@@ -465,10 +561,32 @@ export function CommandPalette() {
           ) : (
             /* ── Cloud Models tab ── */
             <div className="px-4 py-2">
-              <div className="text-[11px] mb-3" style={{ color: 'var(--color-text-tertiary)' }}>
-                {desktopKeyStorage
-                  ? 'Add your API keys to use cloud models. Keys are stored in secure desktop storage.'
-                  : 'Configure cloud provider keys in the server environment to use cloud models.'}
+              {/* Active Cloud Engine Banner */}
+              {serverInfo?.engine && (
+                <div className="mb-3.5 p-3 rounded-xl flex items-center justify-between gap-3" style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold flex items-center gap-1.5" style={{ color: 'var(--color-text)' }}>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0 inline-block" />
+                      Active: {serverInfo.engine.toUpperCase()} ({serverInfo.model || '01-ai/yi-large'})
+                    </div>
+                    <div className="text-[11px] truncate mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                      Connected & ready to chat immediately
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleSelect(serverInfo.model || '01-ai/yi-large');
+                    }}
+                    className="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer shrink-0 flex items-center gap-1 shadow-sm"
+                    style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)' }}
+                  >
+                    <Check size={13} /> Chat Now
+                  </button>
+                </div>
+              )}
+
+              <div className="text-[11px] mb-3 leading-relaxed" style={{ color: 'var(--color-text-tertiary)' }}>
+                Enter your API key below to connect ChatGPT (OpenAI) or Google Gemini models.
               </div>
 
               {CLOUD_PROVIDERS.map((provider) => {
@@ -498,9 +616,14 @@ export function CommandPalette() {
                           type={isVisible ? 'text' : 'password'}
                           value={key}
                           onChange={(e) => setApiKeys((prev) => ({ ...prev, [provider.envKey]: e.target.value }))}
-                          onBlur={() => handleKeyBlur(provider)}
-                          placeholder={hasSavedKey ? 'Saved in secure storage' : provider.envKey}
-                          disabled={!desktopKeyStorage || isSaving}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && key.trim()) {
+                              e.preventDefault();
+                              void handleSaveKey(provider, key);
+                            }
+                          }}
+                          placeholder={hasSavedKey ? 'API Key Saved (Connected)' : `Paste ${provider.envKey}`}
+                          disabled={isSaving}
                           className="flex-1 text-xs px-2 py-1.5 bg-transparent outline-none font-mono"
                           style={{ color: 'var(--color-text)' }}
                         />
@@ -511,6 +634,16 @@ export function CommandPalette() {
                           {isVisible ? <EyeOff size={12} /> : <Eye size={12} />}
                         </button>
                       </div>
+                      {key.trim() && (
+                        <button
+                          onClick={() => handleSaveKey(provider, key)}
+                          disabled={isSaving}
+                          className="px-2.5 py-1 rounded-lg text-xs font-medium cursor-pointer"
+                          style={{ background: 'var(--color-accent)', color: 'var(--color-on-accent)', opacity: isSaving ? 0.5 : 1 }}
+                        >
+                          {isSaving ? 'Saving...' : 'Save'}
+                        </button>
+                      )}
                       {hasSavedKey && (
                         <button
                           onClick={() => handleSaveKey(provider, '')}
@@ -518,7 +651,7 @@ export function CommandPalette() {
                           className="px-2 py-1 rounded-lg text-[10px] cursor-pointer"
                           style={{ color: 'var(--color-error)', border: '1px solid var(--color-error)', opacity: isSaving ? 0.5 : 1 }}
                         >
-                          {isSaving ? 'Saving' : 'Remove'}
+                          {isSaving ? 'Removing...' : 'Remove'}
                         </button>
                       )}
                     </div>
