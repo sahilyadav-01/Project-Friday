@@ -181,18 +181,25 @@ export function ChatArea() {
         className="flex-1 overflow-y-auto"
       >
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-full px-4">
-            <div
-              className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: 'var(--color-accent-subtle)', color: 'var(--color-accent)' }}
-            >
-              <Sparkles size={24} />
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+            {/* Glowing F.R.I.D.A.Y. Arc Reactor Core */}
+            <div className="relative mb-5 flex items-center justify-center group cursor-pointer" onClick={() => navigate('/dashboard')}>
+              <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/35 to-cyan-500/25 blur-xl group-hover:blur-2xl transition-all animate-pulse" />
+              <img
+                src="/friday-core.jpg"
+                alt="F.R.I.D.A.Y. HUD Core"
+                className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-700 group-hover:scale-105"
+              />
+              <span className="absolute -bottom-2.5 px-3 py-0.5 rounded-full text-[10px] font-mono tracking-widest bg-black/85 text-orange-400 border border-orange-500/50 backdrop-blur-md uppercase shadow-md">
+                F.R.I.D.A.Y. ONLINE
+              </span>
             </div>
-            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-              {getGreeting()}
+
+            <h2 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--color-text)' }}>
+              {getGreeting()}, James!
             </h2>
-            <p className="text-sm text-center max-w-sm mb-6" style={{ color: 'var(--color-text-secondary)' }}>
-              Ask anything. Your AI runs locally — private, fast, and always available.
+            <p className="text-sm max-w-md mb-6 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              I am <span className="font-semibold text-orange-500 dark:text-orange-400">F.R.I.D.A.Y.</span>, your personal AI assistant. All neural systems are online and calibrated. How can I assist you today, sir?
             </p>
 
             {/* Quick action hints */}

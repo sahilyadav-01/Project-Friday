@@ -156,8 +156,15 @@ export function MessageBubble({ message, isLive = false }: Props) {
         </div>
       )}
 
-      {/* Audio player (e.g. morning digest) */}
-      {message.audio?.url && <AudioPlayer src={message.audio.url} />}
+      {/* Assistant branding badge */}
+      <div className="flex items-center gap-1.5 mb-1.5 select-none">
+        <div className="relative w-4 h-4 rounded-full overflow-hidden ring-1 ring-orange-500/70 shadow-xs">
+          <img src="/friday-core.jpg" alt="F.R.I.D.A.Y." className="w-full h-full object-cover" />
+        </div>
+        <span className="text-[11px] font-bold tracking-wider uppercase text-orange-500 dark:text-orange-400">
+          F.R.I.D.A.Y.
+        </span>
+      </div>
 
       {/* Assistant message */}
       {cleanContent && (

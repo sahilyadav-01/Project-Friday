@@ -413,6 +413,10 @@ async def stream_cloud(
         keys = _load_keys()
         api_key = keys.get("OPENROUTER_API_KEY", "")
         if not api_key:
+            if keys.get("GEMINI_API_KEY") or keys.get("GOOGLE_API_KEY"):
+                async for token in _stream_google("gemini-3.1-flash-lite", messages, temperature, max_tokens):
+                    yield token
+                return
             raise ValueError(
                 "OPENROUTER_API_KEY not set — add it in the Cloud Models tab"
             )

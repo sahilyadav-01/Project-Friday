@@ -110,8 +110,10 @@ export function InputArea() {
 
   const effectiveModel =
     selectedModel ||
-    serverInfo?.model ||
+    models.find((m) => m.id.startsWith('gemini'))?.id ||
+    models.find((m) => m.owned_by === 'cloud' && !m.id.includes('yi'))?.id ||
     models.find((m) => !isEmbedOnlyModel(m.id))?.id ||
+    serverInfo?.model ||
     defaultModel ||
     '';
 

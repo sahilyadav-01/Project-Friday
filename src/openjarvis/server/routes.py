@@ -1182,9 +1182,12 @@ async def list_models(request: Request) -> ModelListResponse:
     if cloud_keys.get("OPENROUTER_API_KEY"):
         cloud_models.extend(["openrouter/auto"])
 
-    for cm in cloud_models:
-        if cm not in model_ids:
-            model_ids.append(cm)
+    # Prioritize active cloud models so that the UI auto-selects a ready model
+    prioritized_models: list[str] = [cm for cm in cloud_models]
+    for mid in model_ids:
+        if mid not in prioritized_models:
+            prioritized_models.append(mid)
+    model_ids = prioritized_models
 
     return ModelListResponse(
         data=[
