@@ -185,7 +185,15 @@ async def _stream_openai(
                 "Content-Type": "application/json",
             },
         ) as resp:
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                err_bytes = await resp.aread()
+                err_text = err_bytes.decode(errors="replace")
+                try:
+                    err_json = json.loads(err_text)
+                    err_msg = err_json.get("error", {}).get("message", err_text)
+                except Exception:
+                    err_msg = err_text
+                raise RuntimeError(f"OpenAI error ({resp.status_code}): {err_msg}")
             async for line in resp.aiter_lines():
                 if not line.startswith("data: "):
                     continue
@@ -276,7 +284,15 @@ async def _stream_google(
 
     async with httpx.AsyncClient(timeout=180) as client:
         async with client.stream("POST", url, json=payload) as resp:
-            resp.raise_for_status()
+            if resp.status_code >= 400:
+                err_bytes = await resp.aread()
+                err_text = err_bytes.decode(errors="replace")
+                try:
+                    err_json = json.loads(err_text)
+                    err_msg = err_json.get("error", {}).get("message", err_text)
+                except Exception:
+                    err_msg = err_text
+                raise RuntimeError(f"Gemini error ({resp.status_code}): {err_msg}")
             async for line in resp.aiter_lines():
                 if not line.startswith("data: "):
                     continue

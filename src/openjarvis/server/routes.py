@@ -155,14 +155,44 @@ def _ensure_identity_prompt(messages: list[Message], app_config) -> list[Message
     return [combined_system, *non_system_messages]
 
 
+def _engine_key_for_model(engine: Any, model: str) -> str | None:
+    """Resolve the engine that advertised *model* through wrapper layers."""
+    from openjarvis.engine.multi import MultiEngine
+    from openjarvis.security.guardrails import GuardrailsEngine
+    from openjarvis.telemetry.instrumented_engine import InstrumentedEngine
+
+    current = engine
+    while current is not None:
+        if isinstance(current, MultiEngine):
+            return current.engine_key_for(model)
+        if isinstance(current, InstrumentedEngine):
+            current = current._inner
+            continue
+        if isinstance(current, GuardrailsEngine):
+            current = current._engine
+            continue
+        engine_id = getattr(current, "engine_id", None)
+        return engine_id if isinstance(engine_id, str) else None
+    return None
+
+
+def _uses_direct_cloud_router(engine: Any, model: str) -> bool:
+    """Whether *model* should bypass the configured engine for direct cloud."""
+    from openjarvis.server.cloud_router import is_cloud_model
+
+    return is_cloud_model(model) and _engine_key_for_model(engine, model) != "litellm"
+
+
 @router.post("/v1/chat/completions")
 async def chat_completions(request_body: ChatCompletionRequest, request: Request):
     """Handle chat completion requests (streaming and non-streaming)."""
     engine = request.app.state.engine
     agent = getattr(request.app.state, "agent", None)
     model = request_body.model
+    use_cloud = _uses_direct_cloud_router(engine, model)
     use_server_agent = (
         agent is not None
+        and not use_cloud
         and not request_body.tools
         and (not request_body.stream or bool(getattr(agent, "_tools", None)))
     )
@@ -428,34 +458,6 @@ def _remember_exchange(
     )
 
 
-def _engine_key_for_model(engine: Any, model: str) -> str | None:
-    """Resolve the engine that advertised *model* through wrapper layers."""
-    from openjarvis.engine.multi import MultiEngine
-    from openjarvis.security.guardrails import GuardrailsEngine
-    from openjarvis.telemetry.instrumented_engine import InstrumentedEngine
-
-    current = engine
-    while current is not None:
-        if isinstance(current, MultiEngine):
-            return current.engine_key_for(model)
-        if isinstance(current, InstrumentedEngine):
-            current = current._inner
-            continue
-        if isinstance(current, GuardrailsEngine):
-            current = current._engine
-            continue
-        engine_id = getattr(current, "engine_id", None)
-        return engine_id if isinstance(engine_id, str) else None
-    return None
-
-
-def _uses_direct_cloud_router(engine: Any, model: str) -> bool:
-    """Whether *model* should bypass the configured engine for direct cloud."""
-    from openjarvis.server.cloud_router import is_cloud_model
-
-    return is_cloud_model(model) and _engine_key_for_model(engine, model) != "litellm"
-
-
 def _handle_direct(
     engine,
     model: str,
@@ -470,7 +472,33 @@ def _handle_direct(
     kwargs: dict[str, Any] = {}
     if req.tools:
         kwargs["tools"] = req.tools
-    if bus:
+    if _uses_direct_cloud_router(engine, model):
+        from openjarvis.server.cloud_router import stream_cloud
+
+        async def _collect():
+            chunks = []
+            async for token in stream_cloud(
+                model, messages, req.temperature, req.max_tokens
+            ):
+                chunks.append(token)
+            return "".join(chunks)
+
+        import asyncio
+
+        try:
+            full_content = asyncio.run(_collect())
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            try:
+                full_content = loop.run_until_complete(_collect())
+            finally:
+                loop.close()
+        except Exception as exc:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=str(exc))
+
+        result = {"content": full_content, "finish_reason": "stop", "usage": {}}
+    elif bus:
         from openjarvis.telemetry.instrumented_engine import InstrumentedEngine
         from openjarvis.telemetry.wrapper import instrumented_generate
 
