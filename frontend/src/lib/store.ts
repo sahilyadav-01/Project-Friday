@@ -493,13 +493,13 @@ export const useAppStore = create<AppState>((set, get) => {
             chatModels.some((m) => m.id === state.settings.defaultModel) &&
             state.settings.defaultModel) ||
           chatModels[0]?.id ||
-          models.find((m) => !isEmbedOnlyModel(m.id))?.id ||
-          '';
+          (models.length === 0 ? (state.serverInfo?.model || state.settings.defaultModel || '') : '');
 
         const currentIsBad =
           !!state.selectedModel && isEmbedOnlyModel(state.selectedModel);
         const currentMissing =
           !!state.selectedModel &&
+          models.length > 0 &&
           !models.some((m) => m.id === state.selectedModel);
 
         if (!state.selectedModel || currentIsBad || currentMissing) {
@@ -514,7 +514,11 @@ export const useAppStore = create<AppState>((set, get) => {
       }),
     setModelsLoading: (loading: boolean) => set({ modelsLoading: loading }),
     setSelectedModel: (model: string) => set({ selectedModel: model }),
-    setServerInfo: (info: ServerInfo | null) => set({ serverInfo: info }),
+    setServerInfo: (info: ServerInfo | null) =>
+      set((state) => ({
+        serverInfo: info,
+        selectedModel: state.selectedModel || info?.model || '',
+      })),
     setSavings: (data: SavingsData | null) => set({ savings: data }),
     incrementSavings: (usage: TokenUsage) => {
       const cur = get().savings;

@@ -12,6 +12,7 @@ import {
 } from '../../lib/chat-telemetry';
 import { MicButton } from './MicButton';
 import { useSpeech } from '../../hooks/useSpeech';
+import { isEmbedOnlyModel } from '../../lib/model-capabilities';
 import type {
   ChatMessage,
   MessageTelemetry,
@@ -87,6 +88,10 @@ export function InputArea() {
 
   const activeId = useAppStore((s) => s.activeId);
   const selectedModel = useAppStore((s) => s.selectedModel);
+  const setSelectedModel = useAppStore((s) => s.setSelectedModel);
+  const serverInfo = useAppStore((s) => s.serverInfo);
+  const models = useAppStore((s) => s.models);
+  const defaultModel = useAppStore((s) => s.settings.defaultModel);
   const streamState = useAppStore((s) => s.streamState);
   const messages = useAppStore((s) => s.messages);
   const speechEnabled = useAppStore((s) => s.settings.speechEnabled);
@@ -102,6 +107,23 @@ export function InputArea() {
   const setDeepResearch = useAppStore((s) => s.setDeepResearch);
   const corpusSync = useResearchCorpusSync(deepResearch);
   const isCurrentChatStreaming = streamState.isStreaming && streamState.conversationId === activeId;
+
+  const effectiveModel =
+    selectedModel ||
+    serverInfo?.model ||
+    models.find((m) => !isEmbedOnlyModel(m.id))?.id ||
+    defaultModel ||
+    '';
+
+  const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
+  const pickModelText = isMac ? 'Pick a model first (⌘K)' : 'Pick a model first (Ctrl+K)';
+
+  // Auto-sync effective model into store when selectedModel is empty
+  useEffect(() => {
+    if (!selectedModel && effectiveModel) {
+      setSelectedModel(effectiveModel);
+    }
+  }, [selectedModel, effectiveModel, setSelectedModel]);
 
   const {
     state: speechState,

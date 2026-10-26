@@ -11,13 +11,34 @@ export function Layout() {
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
 
   useEffect(() => {
-    const check = () => checkHealth().then(setApiReachable);
+    let timer: ReturnType<typeof setTimeout>;
+    let unmounted = false;
+
+    const check = async () => {
+      try {
+        const reachable = await checkHealth();
+        if (!unmounted) {
+          setApiReachable(reachable);
+          // If reachable, check again in 30s. If unreachable, retry in 3s so the banner clears as soon as the backend is up.
+          timer = setTimeout(check, reachable ? 30000 : 3000);
+        }
+      } catch {
+        if (!unmounted) {
+          setApiReachable(false);
+          timer = setTimeout(check, 3000);
+        }
+      }
+    };
+
     check();
-    const interval = setInterval(check, 30000);
-    const onFocus = () => check();
+    const onFocus = () => {
+      clearTimeout(timer);
+      check();
+    };
     window.addEventListener('focus', onFocus);
     return () => {
-      clearInterval(interval);
+      unmounted = true;
+      clearTimeout(timer);
       window.removeEventListener('focus', onFocus);
     };
   }, []);

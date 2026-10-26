@@ -1127,6 +1127,15 @@ async def list_models(request: Request) -> ModelListResponse:
     if not model_ids:
         model_ids = await list_local_models()
 
+    if not model_ids:
+        configured_model = (
+            getattr(engine, "model", None)
+            or getattr(getattr(getattr(request.app.state, "config", None), "engine", None), "model", None)
+            or getattr(request.app.state, "model", None)
+        )
+        if configured_model:
+            model_ids = [configured_model]
+
     # Keep embed-only models out of the chat model picker. They still work for
     # memory/retrieval via the embedder path; putting them in /v1/models made
     # the UI auto-select nomic-embed-text and fail every generation with 400.

@@ -255,6 +255,8 @@ class NIMEngine(InferenceEngine):
         return [m["id"] for m in data.get("data", [])]
 
     def health(self) -> bool:
+        if self._host == self._default_host and not self._api_key:
+            return False
         try:
             resp = self._client.get(
                 f"{self._api_prefix}/health/ready",

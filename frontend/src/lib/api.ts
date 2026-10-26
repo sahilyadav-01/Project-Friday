@@ -296,7 +296,8 @@ export async function checkHealth(): Promise<boolean> {
   // reach the backend.
   const probe = async (url: string): Promise<boolean> => {
     try {
-      const res = await fetch(url, { cache: 'no-store' });
+      const headers = authHeaders();
+      const res = await fetch(url, { headers, cache: 'no-store' });
       return res.ok;
     } catch {
       return false;
@@ -306,10 +307,15 @@ export async function checkHealth(): Promise<boolean> {
   // Probe the configured API base first; the relative fallback supports
   // production deployments where both are served from one origin.
   const base = getBase().replace(/\/+$/, '');
-  if (base && await probe(`${base}/health`)) return true;
+  if (base && (await probe(`${base}/health`))) return true;
   if (await probe('/health')) return true;
-  if (base && await probe(`${base}/v1/connectors`)) return true;
-  return probe('/v1/connectors');
+  if (base && (await probe(`${base}/v1/info`))) return true;
+  if (await probe('/v1/info')) return true;
+  if (base && (await probe(`${base}/v1/connectors`))) return true;
+  if (await probe('/v1/connectors')) return true;
+  // If relative probe failed, attempt direct loopback port 8000 fallback
+  if (!base && (await probe('http://127.0.0.1:8000/health'))) return true;
+  return false;
 }
 
 export async function fetchEnergy(): Promise<unknown> {
