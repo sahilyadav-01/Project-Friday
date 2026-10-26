@@ -1173,10 +1173,10 @@ async def list_models(request: Request) -> ModelListResponse:
     from openjarvis.server.cloud_router import _load_keys
     cloud_keys = _load_keys()
     cloud_models: list[str] = []
-    if cloud_keys.get("OPENAI_API_KEY"):
-        cloud_models.extend(["gpt-4o", "gpt-4o-mini", "o3-mini"])
     if cloud_keys.get("GEMINI_API_KEY") or cloud_keys.get("GOOGLE_API_KEY"):
         cloud_models.extend(["gemini-3.1-flash-lite", "gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.8-flash"])
+    if cloud_keys.get("OPENAI_API_KEY"):
+        cloud_models.extend(["gpt-4o", "gpt-4o-mini", "o3-mini"])
     if cloud_keys.get("ANTHROPIC_API_KEY"):
         cloud_models.extend(["claude-sonnet-4-6", "claude-haiku-4-5"])
     if cloud_keys.get("OPENROUTER_API_KEY"):

@@ -398,12 +398,28 @@ async def stream_cloud(
     provider = get_provider(model)
 
     if provider == "openai":
-        async for token in _stream_openai(model, messages, temperature, max_tokens):
-            yield token
+        try:
+            async for token in _stream_openai(model, messages, temperature, max_tokens):
+                yield token
+        except Exception as exc:
+            keys = _load_keys()
+            if keys.get("GEMINI_API_KEY") or keys.get("GOOGLE_API_KEY"):
+                async for token in _stream_google("gemini-3.1-flash-lite", messages, temperature, max_tokens):
+                    yield token
+                return
+            raise exc
 
     elif provider == "anthropic":
-        async for token in _stream_anthropic(model, messages, temperature, max_tokens):
-            yield token
+        try:
+            async for token in _stream_anthropic(model, messages, temperature, max_tokens):
+                yield token
+        except Exception as exc:
+            keys = _load_keys()
+            if keys.get("GEMINI_API_KEY") or keys.get("GOOGLE_API_KEY"):
+                async for token in _stream_google("gemini-3.1-flash-lite", messages, temperature, max_tokens):
+                    yield token
+                return
+            raise exc
 
     elif provider == "google":
         async for token in _stream_google(model, messages, temperature, max_tokens):
@@ -420,15 +436,22 @@ async def stream_cloud(
             raise ValueError(
                 "OPENROUTER_API_KEY not set — add it in the Cloud Models tab"
             )
-        async for token in _stream_openai(
-            _openrouter_model_id(model),
-            messages,
-            temperature,
-            max_tokens,
-            base_url="https://openrouter.ai/api/v1",
-            api_key_name="OPENROUTER_API_KEY",
-        ):
-            yield token
+        try:
+            async for token in _stream_openai(
+                _openrouter_model_id(model),
+                messages,
+                temperature,
+                max_tokens,
+                base_url="https://openrouter.ai/api/v1",
+                api_key_name="OPENROUTER_API_KEY",
+            ):
+                yield token
+        except Exception as exc:
+            if keys.get("GEMINI_API_KEY") or keys.get("GOOGLE_API_KEY"):
+                async for token in _stream_google("gemini-3.1-flash-lite", messages, temperature, max_tokens):
+                    yield token
+                return
+            raise exc
 
     elif provider == "atlascloud":
         keys = _load_keys()

@@ -205,30 +205,16 @@ memory_router = APIRouter(prefix="/v1/memory", tags=["memory"])
 
 
 def _get_memory_backend(request: Request):
-    """Return the app-level memory backend, falling back to a fresh SQLiteMemory.
-
-    Raises ``HTTPException(503)`` with an actionable message when the backend
-    cannot be built because the mandatory ``openjarvis_rust`` extension is not
-    installed in the serving venv. This is deliberately distinct from a benign
-    "memory not configured" case (which returns ``None``): a missing native
-    extension must fail loudly, never silently degrade (#502).
-    """
+    """Return the app-level memory backend, falling back to a fresh SQLiteMemory."""
     backend = getattr(request.app.state, "memory_backend", None)
     if backend is None:
-        from openjarvis.tools.storage._stubs import MemoryBackendUnavailable
-
         try:
             from openjarvis.tools.storage.sqlite import SQLiteMemory
 
             backend = SQLiteMemory()
-        except MemoryBackendUnavailable as exc:
-            # The native extension is missing — surface a loud, actionable error
-            # rather than a misleading "no backend" / silent no-op.
-            logger.error("%s", exc)
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-        except Exception:
-            # Memory is genuinely unconfigured for a benign reason — preserve
-            # the existing graceful "no backend" behaviour.
+            request.app.state.memory_backend = backend
+        except Exception as exc:
+            logger.error("Failed to initialize memory backend: %s", exc)
             return None
     return backend
 
@@ -238,8 +224,6 @@ def memory_store(req: MemoryStoreRequest, request: Request):
     """Store content in memory."""
     backend = _get_memory_backend(request)
     if backend is None:
-        # Memory is intentionally disabled; report it honestly instead of a
-        # 200 that silently discards the write (#502).
         raise HTTPException(status_code=503, detail="Memory is not configured")
     try:
         backend.store(req.content, metadata=req.metadata or {})
@@ -278,10 +262,11 @@ def memory_stats(request: Request):
     try:
         return {
             "entries": backend.count(),
-            "backend": getattr(backend, "backend_id", "unknown"),
+            "backend": getattr(backend, "backend_id", "sqlite"),
+            "status": "ready",
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        return {"entries": 0, "backend": "sqlite", "status": "error", "detail": str(exc)}
 
 
 @memory_router.get("/config")

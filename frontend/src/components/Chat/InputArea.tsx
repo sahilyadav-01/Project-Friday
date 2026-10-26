@@ -494,6 +494,7 @@ export function InputArea() {
           message: `Stream error: ${errMsg}`,
         });
       }
+      setStreamState({ content: accumulatedContent, phase: '' });
       // If we tore out mid-research, make sure the live System panel
       // numbers don't get stuck on the last sample.
       useAppStore.getState().setLiveEnergy(null);
