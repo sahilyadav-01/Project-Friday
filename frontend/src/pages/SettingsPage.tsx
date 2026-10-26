@@ -488,6 +488,24 @@ export function SettingsPage() {
         </header>
 
         <div className="flex flex-col gap-4">
+          {/* User Profile */}
+          <Section title="User Profile">
+            <SettingRow label="Your Name" description="How F.R.I.D.A.Y. addresses you in greetings and chats">
+              <input
+                type="text"
+                value={settings.userName || 'Sahil Yadav'}
+                onChange={(e) => { updateSettings({ userName: e.target.value }); showSaved(); }}
+                className="text-sm px-3 py-1.5 rounded-lg outline-none w-48 text-right font-medium"
+                style={{
+                  background: 'var(--color-bg-secondary)',
+                  color: 'var(--color-text)',
+                  border: '1px solid var(--color-border)',
+                }}
+                placeholder="Sahil Yadav"
+              />
+            </SettingRow>
+          </Section>
+
           {/* Appearance */}
           <Section title="Appearance">
             <SettingRow label="Theme" description="Choose how Friday looks">

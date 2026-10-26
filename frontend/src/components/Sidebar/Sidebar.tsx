@@ -170,9 +170,16 @@ export function Sidebar() {
           <button
             onClick={() => navigate('/settings')}
             className="w-9 h-9 rounded-full ring-2 ring-white/20 p-0.5 overflow-hidden transition-transform hover:scale-105 cursor-pointer bg-gradient-to-tr from-amber-400 to-indigo-500 flex items-center justify-center text-white text-xs font-bold shadow-md"
-            title="User Profile & Settings"
+            title={`${settings.userName || 'Sahil Yadav'} (Settings)`}
           >
-            <span>SA</span>
+            <span>
+              {(settings.userName || 'Sahil Yadav')
+                .split(' ')
+                .map((n) => n[0])
+                .join('')
+                .slice(0, 2)
+                .toUpperCase() || 'SY'}
+            </span>
           </button>
         </div>
       </aside>

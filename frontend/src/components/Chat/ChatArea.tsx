@@ -34,6 +34,8 @@ export function ChatArea() {
   // autoSpokenId fences the message so re-renders cannot repeat it.
   const voiceOutputEnabled = useAppStore((s) => s.settings.voiceOutputEnabled);
   const voiceAutoplay = useAppStore((s) => s.settings.voiceAutoplay);
+  const userName = useAppStore((s) => s.settings.userName) || 'Sahil Yadav';
+  const firstName = userName.split(' ')[0] || 'Sahil';
   // Probe the backend as soon as voice output is switched on. Without this the
   // first reply could never autoplay: `available` is only set by ensureHealth,
   // which until now ran solely from the per-message read-aloud button -- and
@@ -196,7 +198,7 @@ export function ChatArea() {
             </div>
 
             <h2 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--color-text)' }}>
-              {getGreeting()}, James!
+              {getGreeting()}, {firstName}!
             </h2>
             <p className="text-sm max-w-md mb-6 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
               I am <span className="font-semibold text-orange-500 dark:text-orange-400">F.R.I.D.A.Y.</span>, your personal AI assistant. All neural systems are online and calibrated. How can I assist you today, sir?

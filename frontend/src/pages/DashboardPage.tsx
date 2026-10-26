@@ -137,6 +137,15 @@ export function DashboardPage() {
   const selectedModel = useAppStore((s) => s.selectedModel);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
   const addMessage = useAppStore((s) => s.addMessage);
+  const userName = useAppStore((s) => s.settings.userName) || 'Sahil Yadav';
+  const firstName = userName.split(' ')[0] || 'Sahil';
+  const userInitials =
+    userName
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase() || 'SY';
 
   // Filter tools
   const filteredTools = TOOLS.filter((tool) => {
@@ -181,10 +190,10 @@ export function DashboardPage() {
               className="text-2xl md:text-3xl font-bold tracking-tight"
               style={{ color: 'var(--color-text)' }}
             >
-              {greetingTime}, James!
+              {greetingTime}, {firstName}!
             </h1>
             <p className="text-sm mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-              How can we assist you today?
+              How can F.R.I.D.A.Y. assist you today?
             </p>
           </div>
 
@@ -242,12 +251,13 @@ export function DashboardPage() {
                 border: '1px solid var(--color-border)',
               }}
               onClick={() => navigate('/settings')}
+              title={`${userName} (Settings)`}
             >
               <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-400 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold overflow-hidden shadow-inner">
-                <span>NA</span>
+                <span>{userInitials}</span>
               </div>
-              <span className="text-xs font-medium truncate max-w-[100px]" style={{ color: 'var(--color-text)' }}>
-                Nola Alexander
+              <span className="text-xs font-medium truncate max-w-[120px]" style={{ color: 'var(--color-text)' }}>
+                {userName}
               </span>
               <ChevronDown size={14} style={{ color: 'var(--color-text-tertiary)' }} />
             </div>
