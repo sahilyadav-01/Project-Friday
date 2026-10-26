@@ -277,9 +277,21 @@ async def _stream_google(
         },
     }
 
+    model_aliases = {
+        "gemini-1.5-flash": "gemini-3.1-flash-lite",
+        "gemini-2.5-flash": "gemini-3.1-flash-lite",
+        "gemini-2.5-pro": "gemini-3.1-flash-lite",
+        "gemini-flash": "gemini-3.1-flash-lite",
+        "gemini-pro": "gemini-3.1-flash-lite",
+        "gemini-flash-lite": "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite": "gemini-3.1-flash-lite",
+        "gemini-3.8-flash": "gemini-3.8-flash",
+    }
+    resolved_model = model_aliases.get(model, model)
+
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:streamGenerateContent?alt=sse&key={api_key}"
+        f"{resolved_model}:streamGenerateContent?alt=sse&key={api_key}"
     )
 
     async with httpx.AsyncClient(timeout=180) as client:
