@@ -72,7 +72,7 @@ def voice_preferences(config: "JarvisConfig") -> tuple[str, str, float]:
     """Resolve ``(tts_backend, voice_id, speed)`` from *config*."""
     speech = getattr(config, "speech", None)
     return (
-        getattr(speech, "tts_backend", "kokoro") or "kokoro",
+        getattr(speech, "tts_backend", "edge_tts") or "edge_tts",
         getattr(speech, "voice_id", "") or "",
         float(getattr(speech, "voice_speed", 1.0)),
     )

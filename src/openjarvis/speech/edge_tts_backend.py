@@ -66,9 +66,11 @@ class EdgeTTSBackend(TTSBackend):
     def available_voices(self) -> List[str]:
         return [
             "en-IE-EmilyNeural",   # Friday (Irish Female)
+            "hi-IN-SwaraNeural",   # Hindi Female (Swara)
             "en-US-AriaNeural",    # US Female
             "en-US-JennyNeural",   # US Female
             "en-GB-SoniaNeural",   # British Female
+            "hi-IN-MadhurNeural",  # Hindi Male (Madhur)
             "en-US-GuyNeural",     # US Male
             "en-GB-RyanNeural",    # British Male
         ]
