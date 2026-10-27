@@ -32,10 +32,12 @@ interface TtsStore {
 // Playback handles are not render state -- keeping them out of the store avoids
 // re-rendering every subscriber when an audio element is swapped.
 let audio: HTMLAudioElement | null = null;
+let sharedAudioElement: HTMLAudioElement | null = null;
 let objectUrl: string | null = null;
 let controller: AbortController | null = null;
 let activeSourceNode: AudioBufferSourceNode | null = null;
 let sharedAudioCtx: AudioContext | null = null;
+let activeUtterance: SpeechSynthesisUtterance | null = null;
 let token = 0;
 let healthProbe: Promise<void> | null = null;
 
@@ -49,6 +51,38 @@ export function getSharedAudioContext(): AudioContext | null {
   return sharedAudioCtx;
 }
 
+export function getSharedAudioElement(): HTMLAudioElement | null {
+  if (typeof window === 'undefined') return null;
+  if (!sharedAudioElement) {
+    try {
+      sharedAudioElement = new Audio();
+      sharedAudioElement.preload = 'auto';
+      sharedAudioElement.volume = 1.0;
+    } catch {}
+  }
+  return sharedAudioElement;
+}
+
+function decodeAudioDataSafe(ctx: AudioContext, buffer: ArrayBuffer): Promise<AudioBuffer> {
+  return new Promise((resolve, reject) => {
+    try {
+      const promise = ctx.decodeAudioData(
+        buffer.slice(0),
+        (decoded) => {
+          if (decoded) resolve(decoded);
+          else reject(new Error('Audio decoding returned empty buffer'));
+        },
+        (err) => reject(err),
+      );
+      if (promise && typeof promise.then === 'function') {
+        promise.then(resolve).catch(reject);
+      }
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 function speakBrowserFemaleVoice(
   text: string,
   onEnd: () => void,
@@ -57,8 +91,11 @@ function speakBrowserFemaleVoice(
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
   try {
     window.speechSynthesis.cancel();
-    window.speechSynthesis.resume();
+    if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    }
     const utterance = new SpeechSynthesisUtterance(text);
+    activeUtterance = utterance;
     const voices = window.speechSynthesis.getVoices();
     const isHindi = /[\u0900-\u097F]/.test(text);
 
@@ -81,8 +118,12 @@ function speakBrowserFemaleVoice(
     }
     utterance.pitch = 1.05;
     utterance.rate = 1.0;
-    utterance.onend = onEnd;
+    utterance.onend = () => {
+      activeUtterance = null;
+      onEnd();
+    };
     utterance.onerror = (e) => {
+      activeUtterance = null;
       if (e.error === 'canceled' || e.error === 'interrupted') return;
       onError(e);
     };
@@ -118,11 +159,21 @@ function teardown(): void {
     } catch {}
     activeSourceNode = null;
   }
+  if (sharedAudioElement) {
+    try {
+      sharedAudioElement.onended = null;
+      sharedAudioElement.onerror = null;
+      sharedAudioElement.pause();
+      sharedAudioElement.src = '';
+    } catch {}
+  }
   if (audio) {
-    audio.onended = null;
-    audio.onerror = null;
-    audio.pause();
-    audio.src = '';
+    try {
+      audio.onended = null;
+      audio.onerror = null;
+      audio.pause();
+      audio.src = '';
+    } catch {}
     audio = null;
   }
   if (objectUrl) {
@@ -133,12 +184,15 @@ function teardown(): void {
     controller.abort();
     controller = null;
   }
+  if (activeUtterance) {
+    activeUtterance.onend = null;
+    activeUtterance.onerror = null;
+    activeUtterance = null;
+  }
   if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
     try {
       window.speechSynthesis.cancel();
-    } catch {
-      // Ignore
-    }
+    } catch {}
   }
 }
 
@@ -222,43 +276,48 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
 
       if (mine !== token) return;
 
-      // Strategy 1: High-performance AudioContext playback (immune to tag autoplay blocking)
+      // Strategy 1: Shared AudioContext playback with volume gain node
       const ctx = getSharedAudioContext();
       if (ctx) {
         try {
           if (ctx.state === 'suspended') {
             await ctx.resume().catch(() => {});
           }
-          if (ctx.state === 'running') {
-            const arrayBuf = await blob.arrayBuffer();
-            const decodedBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+          const arrayBuf = await blob.arrayBuffer();
+          const decodedBuffer = await decodeAudioDataSafe(ctx, arrayBuf);
+          if (mine !== token) return;
+
+          const source = ctx.createBufferSource();
+          source.buffer = decodedBuffer;
+          const gainNode = ctx.createGain();
+          gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
+          source.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          activeSourceNode = source;
+
+          source.onended = () => {
             if (mine !== token) return;
+            teardown();
+            set({ state: 'idle', speakingId: null });
+          };
 
-            const source = ctx.createBufferSource();
-            source.buffer = decodedBuffer;
-            source.connect(ctx.destination);
-            activeSourceNode = source;
-
-            source.onended = () => {
-              if (mine !== token) return;
-              teardown();
-              set({ state: 'idle', speakingId: null });
-            };
-
-            source.start(0);
-            if (mine === token) set({ state: 'speaking', speakingId: id });
-            return;
-          }
-        } catch {
-          // Fall back to Audio element
+          source.start(0);
+          if (mine === token) set({ state: 'speaking', speakingId: id });
+          return;
+        } catch (ctxErr) {
+          console.warn('[Friday Voice] AudioContext strategy error:', ctxErr);
         }
       }
 
-      // Strategy 2: HTMLAudioElement playback
+      // Strategy 2: Pre-blessed persistent HTMLAudioElement playback
       const url = URL.createObjectURL(blob);
       objectUrl = url;
-      const el = new Audio(url);
+      const el = getSharedAudioElement() || new Audio();
       audio = el;
+      el.src = url;
+      el.volume = 1.0;
+      el.muted = false;
+      el.currentTime = 0;
 
       el.onended = () => {
         if (mine !== token) return;
@@ -274,7 +333,9 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
       try {
         await el.play();
         if (mine === token) set({ state: 'speaking', speakingId: id });
+        return;
       } catch (playErr) {
+        console.warn('[Friday Voice] HTMLAudioElement strategy error:', playErr);
         // Strategy 3: Fallback to browser speech synthesis
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           const spoken = speakBrowserFemaleVoice(
@@ -324,13 +385,34 @@ export function unlockAudio(): void {
     const ctx = getSharedAudioContext();
     if (ctx && ctx.state === 'suspended') {
       ctx.resume().catch(() => {});
+      try {
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      } catch {}
     }
-    const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
-    silent.play().catch(() => {});
+    const el = getSharedAudioElement();
+    if (el) {
+      el.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      el.play().catch(() => {});
+    }
     if ('speechSynthesis' in window) {
       window.speechSynthesis.resume();
     }
   } catch {}
+}
+
+// Auto-register interaction listeners so ANY user interaction automatically unlocks audio
+if (typeof window !== 'undefined') {
+  const onUserInteraction = () => {
+    unlockAudio();
+  };
+  window.addEventListener('click', onUserInteraction, { capture: true, passive: true });
+  window.addEventListener('pointerdown', onUserInteraction, { capture: true, passive: true });
+  window.addEventListener('keydown', onUserInteraction, { capture: true, passive: true });
+  window.addEventListener('touchstart', onUserInteraction, { capture: true, passive: true });
 }
 
 /** Test seam: reset module-level playback handles between cases. */

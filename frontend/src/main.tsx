@@ -7,7 +7,17 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import App from './App';
 import { initApiBase } from './lib/api';
 import { initAnalytics } from './lib/analytics';
+import { unlockAudio } from './lib/tts';
 import './index.css';
+
+// Ensure any registered Service Worker updates immediately so fresh assets are loaded
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.update().catch(() => {});
+    }
+  }).catch(() => {});
+}
 
 function applyTheme() {
   try {

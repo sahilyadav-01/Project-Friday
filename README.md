@@ -96,7 +96,7 @@ npm run dev
 Install development dependencies:
 
 ```bash
-uv sync --extra dev
+uv sync --extra server --extra desktop --extra dev
 ```
 
 Run the Python test suite:

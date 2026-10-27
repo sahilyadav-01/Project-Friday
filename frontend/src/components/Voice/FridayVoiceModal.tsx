@@ -53,6 +53,7 @@ export function FridayVoiceModal() {
 
   // Local Voice State
   const [status, setStatus] = useState<VoiceStatus>('listening');
+  const [isMuted, setIsMuted] = useState(false);
   const [language, setLanguage] = useState<'hi-IN' | 'en-US' | 'auto'>('hi-IN');
   const [userTranscript, setUserTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -65,6 +66,7 @@ export function FridayVoiceModal() {
 
   // Status and Mute reference to avoid stale closure issues
   const isMutedRef = useRef(false);
+  isMutedRef.current = isMuted;
   const statusRef = useRef<VoiceStatus>('listening');
   statusRef.current = status;
 
@@ -519,27 +521,34 @@ Crucial Voice Rules:
       updateLastAssistant(convId, finalReply);
       setHistoryItems((prev) => [...prev, { role: 'assistant', text: finalReply }]);
 
+      // Resolve active voice: Swara for Hindi, Emily (or selected) for English
+      const voiceId = language === 'hi-IN' ? 'hi-IN-SwaraNeural' : 'en-IE-EmilyNeural';
+
       // Speak back the response!
       statusRef.current = 'speaking';
       setStatus('speaking');
       isProcessingUtteranceRef.current = false;
-      await speakTts(assistantMessageId, finalReply);
+      await speakTts(assistantMessageId, finalReply, { voiceId });
     } catch (err: any) {
       isProcessingUtteranceRef.current = false;
       if (err.name === 'AbortError') return;
-      const fallback = `I am online, ${firstName}. How may I help you?`;
+      const voiceId = language === 'hi-IN' ? 'hi-IN-SwaraNeural' : 'en-IE-EmilyNeural';
+      const fallback = language === 'hi-IN'
+        ? `जी ${firstName}, मैं ऑनलाइन हूँ। बताइए मैं क्या मदद करूँ?`
+        : `I am online, ${firstName}. How may I help you?`;
       setAssistantReply(fallback);
       statusRef.current = 'speaking';
       setStatus('speaking');
-      await speakTts(assistantMessageId, fallback);
+      await speakTts(assistantMessageId, fallback, { voiceId });
     }
   };
 
   // Toggle Mute (Strict, Reliable, Hardware-off)
   const toggleMute = () => {
     unlockAudio();
-    if (isMutedRef.current || status === 'muted') {
+    if (isMuted || isMutedRef.current || status === 'muted') {
       // Unmute
+      setIsMuted(false);
       isMutedRef.current = false;
       statusRef.current = 'listening';
       setStatus('listening');
@@ -550,6 +559,7 @@ Crucial Voice Rules:
       });
     } else {
       // Mute
+      setIsMuted(true);
       isMutedRef.current = true;
       statusRef.current = 'muted';
       setStatus('muted');
@@ -558,6 +568,7 @@ Crucial Voice Rules:
       if (mediaStreamRef.current) {
         mediaStreamRef.current.getTracks().forEach((track) => {
           try {
+            track.enabled = false;
             track.stop();
           } catch {}
         });
@@ -638,13 +649,16 @@ Crucial Voice Rules:
     if (!assistantReply) return;
     unlockAudio();
     const replayId = generateId();
+    const voiceId = language === 'hi-IN' ? 'hi-IN-SwaraNeural' : 'en-IE-EmilyNeural';
+    statusRef.current = 'speaking';
     setStatus('speaking');
-    await speakTts(replayId, assistantReply);
+    await speakTts(replayId, assistantReply, { voiceId });
   };
 
   // When modal opens/closes
   useEffect(() => {
     if (isOpen) {
+      setIsMuted(false);
       isMutedRef.current = false;
       isProcessingUtteranceRef.current = false;
       unlockAudio();
@@ -1018,12 +1032,12 @@ Crucial Voice Rules:
           <button
             onClick={toggleMute}
             className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-mono text-xs font-semibold transition-all cursor-pointer shadow-md ${
-              status === 'muted'
+              isMuted || status === 'muted'
                 ? 'bg-red-600 hover:bg-red-500 text-white ring-2 ring-red-400 shadow-red-600/40'
                 : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700'
             }`}
           >
-            {status === 'muted' ? (
+            {isMuted || status === 'muted' ? (
               <>
                 <Mic size={14} className="text-white animate-pulse" />
                 <span>Unmute Mic (Currently Muted)</span>
