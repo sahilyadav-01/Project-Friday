@@ -28,6 +28,7 @@ import {
 import { EnergyDashboard } from '../components/Dashboard/EnergyDashboard';
 import { CostComparison } from '../components/Dashboard/CostComparison';
 import { TraceDebugger } from '../components/Dashboard/TraceDebugger';
+import { ApprovalBell } from '../components/ApprovalBell';
 import { useAppStore } from '../lib/store';
 
 type Category =
@@ -136,6 +137,7 @@ export function DashboardPage() {
 
   const selectedModel = useAppStore((s) => s.selectedModel);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
+  const setVoiceModalOpen = useAppStore((s) => s.setVoiceModalOpen);
   const addMessage = useAppStore((s) => s.addMessage);
   const userName = useAppStore((s) => s.settings.userName) || 'Sahil Yadav';
   const firstName = userName.split(' ')[0] || 'Sahil';
@@ -230,18 +232,15 @@ export function DashboardPage() {
             </div>
 
             {/* Notification Bell */}
-            <button
-              className="p-2.5 rounded-full transition-colors cursor-pointer relative"
+            <div
+              className="p-1 rounded-full flex items-center justify-center transition-colors"
               style={{
                 background: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
-                color: 'var(--color-text-secondary)',
               }}
-              title="Notifications"
             >
-              <Bell size={16} />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-zinc-900" />
-            </button>
+              <ApprovalBell embedded />
+            </div>
 
             {/* Profile Avatar Capsule */}
             <div
@@ -282,15 +281,18 @@ export function DashboardPage() {
               {/* Glowing F.R.I.D.A.Y. Arc Reactor Core */}
               <div
                 className="relative mb-3 flex items-center justify-center group cursor-pointer"
-                onClick={() => navigate('/chat')}
-                title="Open F.R.I.D.A.Y. Chat"
+                onClick={() => setVoiceModalOpen(true)}
+                title="Launch F.R.I.D.A.Y. Voice Assistant (Talk with Friday)"
               >
                 <div className="absolute -inset-3 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/35 to-cyan-500/25 blur-lg group-hover:blur-xl transition-all animate-pulse" />
                 <img
                   src="/friday-core.jpg"
                   alt="F.R.I.D.A.Y. HUD Core"
-                  className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-500 group-hover:scale-105"
+                  className="relative w-20 h-20 md:w-24 md:h-24 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-500 group-hover:scale-110"
                 />
+                <span className="absolute -bottom-2 px-2.5 py-0.5 rounded-full text-[9px] font-mono tracking-widest bg-black/85 text-orange-400 border border-orange-500/50 backdrop-blur-md uppercase shadow-md opacity-90 group-hover:opacity-100 group-hover:bg-orange-500 group-hover:text-black transition-all">
+                  Voice Core • Talk
+                </span>
               </div>
 
               <div

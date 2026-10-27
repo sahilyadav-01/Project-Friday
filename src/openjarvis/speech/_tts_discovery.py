@@ -16,18 +16,34 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # Priority order: local/free neural first, then cloud.
-TTS_BACKEND_ORDER = ("edge_tts", "kokoro", "openai_tts", "cartesia", "elevenlabs")
+TTS_BACKEND_ORDER = ("edge_tts", "piper", "kokoro", "openai_tts", "cartesia", "elevenlabs")
 
 # Voice IDs are backend-specific and NOT portable. ``speech.voice_id`` applies
 # only to ``speech.tts_backend``; if synthesis falls back to another backend we
 # use that backend's own default rather than passing an unrecognized ID through.
 BACKEND_DEFAULT_VOICE = {
     "edge_tts": "en-IE-EmilyNeural",  # Irish female — Friday persona
+    "piper": "en_US-lessac-medium",   # Offline US female
     "kokoro": "af_heart",  # American female
     "openai_tts": "nova",  # Female preset
     "cartesia": "a0e99841-438c-4a64-b679-ae501e7d6091",  # Female
     "elevenlabs": "21m00Tcm4TlvDq8ikWAM",  # Rachel (female)
 }
+
+
+def backend_for_voice(voice_id: str) -> str:
+    """Infer the most appropriate TTS backend for a given voice_id."""
+    if not voice_id:
+        return ""
+    if "Neural" in voice_id or voice_id.startswith(("en-", "hi-", "es-", "fr-", "de-", "it-", "ja-")):
+        return "edge_tts"
+    if ("-medium" in voice_id or "-high" in voice_id or "-low" in voice_id or "_" in voice_id) and not voice_id.startswith("af_"):
+        return "piper"
+    if voice_id.startswith("af_"):
+        return "kokoro"
+    if voice_id in ("alloy", "echo", "fable", "onyx", "nova", "shimmer"):
+        return "openai_tts"
+    return ""
 
 
 def default_voice_for(backend_id: str) -> str:
@@ -81,6 +97,7 @@ def voice_preferences(config: "JarvisConfig") -> tuple[str, str, float]:
 __all__ = [
     "BACKEND_DEFAULT_VOICE",
     "TTS_BACKEND_ORDER",
+    "backend_for_voice",
     "default_voice_for",
     "get_tts_backend",
     "voice_preferences",

@@ -25,11 +25,11 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Friday',
-        short_name: 'Friday',
-        description: 'Your on-device AI assistant',
-        theme_color: '#161618',
-        background_color: '#161618',
+        name: 'F.R.I.D.A.Y.',
+        short_name: 'F.R.I.D.A.Y.',
+        description: 'F.R.I.D.A.Y. AI Assistant',
+        theme_color: '#0D0E12',
+        background_color: '#0D0E12',
         display: 'standalone',
         icons: [
           { src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' },

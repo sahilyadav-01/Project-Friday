@@ -20,7 +20,13 @@ function timeAgo(iso: string): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-export function ApprovalBell() {
+export function ApprovalBell({
+  embedded = false,
+  className = '',
+}: {
+  embedded?: boolean;
+  className?: string;
+} = {}) {
   const [approvals, setApprovals] = useState<PendingApproval[]>([]);
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
@@ -75,25 +81,32 @@ export function ApprovalBell() {
   const count = approvals.length;
 
   return (
-    <div ref={containerRef} className="fixed top-2 right-3 z-40">
+    <div
+      ref={containerRef}
+      className={
+        embedded
+          ? `relative inline-flex items-center ${className}`
+          : `fixed top-2.5 right-6 z-40 ${className}`
+      }
+    >
       {/* Bell trigger */}
       <button
         onClick={() => setOpen(o => !o)}
-        className="relative p-2 rounded-lg transition-colors cursor-pointer"
+        className="relative p-1.5 rounded-lg transition-colors cursor-pointer hover:bg-white/5"
         title="Agent approvals"
         style={{
-          color: count > 0 ? 'var(--color-text)' : 'var(--color-text-secondary)',
+          color: count > 0 ? 'var(--color-error)' : 'var(--color-text-tertiary)',
           background: open
             ? 'var(--color-bg-tertiary)'
             : count > 0
-            ? 'color-mix(in srgb, var(--color-error) 8%, transparent)'
+            ? 'color-mix(in srgb, var(--color-error) 10%, transparent)'
             : 'transparent',
         }}
       >
-        <Bell size={17} />
+        <Bell size={16} />
         {count > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center rounded-full text-[10px] font-bold px-1 leading-none"
+            className="absolute -top-1 -right-1 min-w-[15px] h-3.5 flex items-center justify-center rounded-full text-[9px] font-bold px-1 leading-none"
             style={{ background: 'var(--color-error)', color: '#fff' }}
           >
             {count > 99 ? '99+' : count}

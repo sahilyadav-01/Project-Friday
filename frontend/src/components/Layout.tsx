@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router';
+import { Outlet, useNavigate, useLocation } from 'react-router';
 import { ApprovalBell } from './ApprovalBell';
 import { Sidebar } from './Sidebar/Sidebar';
 import { SystemPulse } from './SystemPulse';
@@ -9,6 +9,8 @@ import { checkHealth } from '../lib/api';
 export function Layout() {
   const sidebarOpen = useAppStore((s) => s.sidebarOpen);
   const [apiReachable, setApiReachable] = useState<boolean | null>(null);
+  const location = useLocation();
+  const isEmbeddedPage = location.pathname === '/' || location.pathname === '/dashboard';
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -49,7 +51,7 @@ export function Layout() {
     <div className="flex flex-col h-full w-full overflow-hidden relative" style={{ paddingTop: '3px' }}>
       <div className="hud-backdrop" aria-hidden="true" />
       <SystemPulse apiReachable={apiReachable} />
-      <ApprovalBell />
+      {!isEmbeddedPage && <ApprovalBell />}
 
       {/* Health check banner */}
       {apiReachable === false && (

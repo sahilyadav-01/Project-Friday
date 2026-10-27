@@ -38,6 +38,46 @@ class LiteLLMEngine(InferenceEngine):
         self._api_base = api_base
         self._default_model = default_model
 
+    @staticmethod
+    def _normalize_model(model: str) -> str:
+        """Resolve model name, adding provider prefix for known families if omitted."""
+        alias_map = {
+            "gemini-1.5-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini-2.0-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini-2.5-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini-2.5-pro": "gemini/gemini-3.1-flash-lite",
+            "gemini-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini/gemini-1.5-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini/gemini-2.0-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini/gemini-2.5-flash": "gemini/gemini-3.1-flash-lite",
+            "gemini/gemini-2.5-pro": "gemini/gemini-3.1-flash-lite",
+        }
+        if model in alias_map:
+            return alias_map[model]
+        if "/" in model:
+            return model
+        if model.startswith("gemini-"):
+            return f"gemini/{model}"
+        if model.startswith("claude-"):
+            return f"anthropic/{model}"
+        return model
+
+    def can_serve(self, model: str) -> bool:
+        """Return True if model has a provider prefix or is recognized by LiteLLM."""
+        norm = self._normalize_model(model)
+        if "/" in norm:
+            return True
+        cloud_prefixes = ("gpt-", "o1-", "o3-", "o4-", "chatgpt-")
+        if any(norm.startswith(p) for p in cloud_prefixes):
+            return True
+        try:
+            import litellm
+
+            litellm.get_llm_provider(norm)
+            return True
+        except Exception:
+            return False
+
     def generate(
         self,
         messages: Sequence[Message],
@@ -49,8 +89,9 @@ class LiteLLMEngine(InferenceEngine):
     ) -> Dict[str, Any]:
         import litellm
 
+        resolved_model = self._normalize_model(model)
         call_kwargs: Dict[str, Any] = {
-            "model": model,
+            "model": resolved_model,
             "messages": messages_to_dicts(messages),
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -62,7 +103,17 @@ class LiteLLMEngine(InferenceEngine):
             call_kwargs["tools"] = kwargs.pop("tools")
         call_kwargs.update(kwargs)
 
-        resp = litellm.completion(**call_kwargs)
+        try:
+            resp = litellm.completion(**call_kwargs)
+        except getattr(litellm.exceptions, "BadRequestError", Exception) as exc:
+            msg = str(exc)
+            if "LLM Provider NOT provided" in msg:
+                raise ValueError(
+                    f"Model '{model}' has no LLM provider specified for LiteLLM. "
+                    "For cloud models specify provider/model (e.g. 'gemini/gemini-2.5-flash' or 'openai/gpt-4o'). "
+                    "For local models, please start Ollama or switch to a cloud model."
+                ) from exc
+            raise
 
         choice = resp.choices[0]
         usage = resp.usage
@@ -112,8 +163,9 @@ class LiteLLMEngine(InferenceEngine):
     ) -> AsyncIterator[str]:
         import litellm
 
+        resolved_model = self._normalize_model(model)
         call_kwargs: Dict[str, Any] = {
-            "model": model,
+            "model": resolved_model,
             "messages": messages_to_dicts(messages),
             "temperature": temperature,
             "max_tokens": max_tokens,
@@ -123,18 +175,25 @@ class LiteLLMEngine(InferenceEngine):
             call_kwargs["api_base"] = self._api_base
         call_kwargs.update(kwargs)
 
-        # ``acompletion`` + ``async for``: the sync ``litellm.completion`` used
-        # before made a blocking network call (and blocking per-chunk reads)
-        # inside this ``async def``, stalling the whole event loop between
-        # tokens — the same bug the httpx engines' streaming paths had.
-        resp = await litellm.acompletion(**call_kwargs)
+        try:
+            resp = await litellm.acompletion(**call_kwargs)
+        except getattr(litellm.exceptions, "BadRequestError", Exception) as exc:
+            msg = str(exc)
+            if "LLM Provider NOT provided" in msg:
+                raise ValueError(
+                    f"Model '{model}' has no LLM provider specified for LiteLLM. "
+                    "For cloud models specify provider/model (e.g. 'gemini/gemini-2.5-flash' or 'openai/gpt-4o'). "
+                    "For local models, please start Ollama or switch to a cloud model."
+                ) from exc
+            raise
+
         async for chunk in resp:
             delta = chunk.choices[0].delta if chunk.choices else None
             if delta and delta.content:
                 yield delta.content
 
     def list_models(self) -> List[str]:
-        if self._default_model:
+        if self._default_model and self.can_serve(self._default_model):
             return [self._default_model]
         return []
 

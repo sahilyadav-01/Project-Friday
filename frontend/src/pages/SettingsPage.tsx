@@ -301,11 +301,19 @@ export function SettingsPage() {
   const handleTestVoice = useCallback(async () => {
     setIsTestingVoice(true);
     try {
-      await useTtsStore.getState().speak('settings-test', 'Hello, boss. Friday voice assistant is online and ready.');
+      const voiceId = settings.voiceId || '';
+      const isHindi = voiceId.startsWith('hi-') || voiceId.startsWith('hi_');
+      const isPiper = voiceId.includes('_') && !voiceId.startsWith('hi-');
+      const testMsg = isHindi
+        ? 'नमस्ते साहिल, फ्राइडे वॉइस असिस्टेंट तैयार है।'
+        : isPiper
+          ? `Hello Sahil! This is the offline Piper voice. I am Friday, your personal AI assistant. Systems are online.`
+          : 'Hello Sahil, Friday voice assistant is online and ready.';
+      await useTtsStore.getState().speak('settings-test', testMsg);
     } finally {
       setIsTestingVoice(false);
     }
-  }, []);
+  }, [settings.voiceId]);
 
   const [autoUpdateEnabled, setAutoUpdateEnabled] = useState(() => !isAutoUpdateDisabled());
   const [updateCheckState, setUpdateCheckState] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
@@ -883,12 +891,22 @@ export function SettingsPage() {
                     color: 'var(--color-text)',
                   }}
                 >
+                  <option value="hi-IN-SwaraNeural">Swara (Hindi Female - F.R.I.D.A.Y.)</option>
                   <option value="en-IE-EmilyNeural">F.R.I.D.A.Y. (Irish Female - Default)</option>
+                  <option value="hi-IN-MadhurNeural">Madhur (Hindi Male)</option>
                   <option value="en-US-AriaNeural">Aria (US Female)</option>
                   <option value="en-US-JennyNeural">Jenny (US Female)</option>
                   <option value="en-GB-SoniaNeural">Sonia (British Female)</option>
-                  <option value="af_heart">Kokoro Heart (Female)</option>
+                  <option disabled>── Offline Voices (Piper) ──</option>
+                  <option value="en_US-lessac-medium">Lessac (US Female — Offline)</option>
+                  <option value="en_US-amy-medium">Amy (US Female — Offline)</option>
+                  <option value="en_GB-jenny-dioco-medium">Jenny (UK Female — Offline)</option>
+                  <option value="en_GB-alba-medium">Alba (UK Female — Offline)</option>
+                  <option value="hi_IN-pratima-medium">Pratima (Hindi Female — Offline)</option>
+                  <option value="en_US-ryan-high">Ryan (US Male — Offline)</option>
+                  <option disabled>── Cloud Voices ──</option>
                   <option value="nova">OpenAI Nova (Female)</option>
+                  <option value="af_heart">Kokoro Heart (Female)</option>
                   <option value="en-US-GuyNeural">Guy (US Male)</option>
                 </select>
                 <button

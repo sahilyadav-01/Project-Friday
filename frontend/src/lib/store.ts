@@ -135,19 +135,31 @@ function loadSettings(): Settings {
     apiUrl: '',
     apiKey: '',
     fontSize: 'default',
-    defaultModel: '',
+    defaultModel: 'gemini-2.5-flash',
     defaultAgent: '',
     temperature: 0.7,
     maxTokens: 4096,
-    speechEnabled: false,
-    voiceOutputEnabled: false,
-    voiceAutoplay: false,
-    voiceId: 'en-IE-EmilyNeural',
+    speechEnabled: true,
+    voiceOutputEnabled: true,
+    voiceAutoplay: true,
+    voiceId: 'hi-IN-SwaraNeural',
   };
   try {
     const raw = safeStorageGet(SETTINGS_KEY);
     if (!raw) return defaults;
-    return { ...defaults, ...JSON.parse(raw) };
+    const parsed = { ...defaults, ...JSON.parse(raw) };
+    if (!parsed.userName || parsed.userName === 'James') {
+      parsed.userName = 'Sahil Yadav';
+    }
+    if (parsed.defaultModel === 'qwen3.5:4b') {
+      parsed.defaultModel = 'gemini-2.5-flash';
+    }
+    parsed.speechEnabled = true;
+    parsed.voiceOutputEnabled = true;
+    if (parsed.voiceAutoplay === undefined) {
+      parsed.voiceAutoplay = true;
+    }
+    return parsed;
   } catch {
     return defaults;
   }
@@ -250,6 +262,8 @@ interface AppState {
   setSidebarOpen: (open: boolean) => void;
   toggleSystemPanel: () => void;
   setSystemPanelOpen: (open: boolean) => void;
+  voiceModalOpen: boolean;
+  setVoiceModalOpen: (open: boolean) => void;
 
   // Data sources (cached between visits to avoid empty-state flicker)
   cachedConnectors: CachedConnector[] | null;
@@ -311,6 +325,7 @@ export const useAppStore = create<AppState>((set, get) => {
     commandPaletteOpen: false,
     sidebarOpen: true,
     systemPanelOpen: true,
+    voiceModalOpen: false,
 
     optInEnabled: safeStorageGet(OPTIN_KEY) === 'true',
     optInDisplayName: safeStorageGet(OPTIN_NAME_KEY) || '',
@@ -579,6 +594,7 @@ export const useAppStore = create<AppState>((set, get) => {
     setSidebarOpen: (open: boolean) => set({ sidebarOpen: open }),
     toggleSystemPanel: () => set((s) => ({ systemPanelOpen: !s.systemPanelOpen })),
     setSystemPanelOpen: (open: boolean) => set({ systemPanelOpen: open }),
+    setVoiceModalOpen: (open: boolean) => set({ voiceModalOpen: open }),
 
     // ── Agents ─────────────────────────────────────────────────────
 

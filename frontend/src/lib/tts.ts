@@ -45,16 +45,27 @@ function speakBrowserFemaleVoice(
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return false;
   try {
     window.speechSynthesis.cancel();
+    window.speechSynthesis.resume();
     const utterance = new SpeechSynthesisUtterance(text);
     const voices = window.speechSynthesis.getVoices();
-    // Prioritize natural female voices: Irish (Emily / Friday), US/UK female voices
+    const isHindi = /[\u0900-\u097F]/.test(text);
+
+    // Prioritize Hindi voices if Hindi text, else Irish / English female voices
+    const hindiVoice = isHindi
+      ? voices.find((v) => /hi[-_]in|hindi/i.test(v.lang) || /swara|madhur|kalpana/i.test(v.name))
+      : null;
+
     const femaleVoice =
+      hindiVoice ||
       voices.find((v) => /emily|ireland|irish/i.test(v.name) || /en[-_]ie/i.test(v.lang)) ||
       voices.find((v) => /zira|aria|jenny|samantha|victoria|susan|karen|female/i.test(v.name)) ||
       voices.find((v) => v.lang.startsWith('en') && /female/i.test(v.name)) ||
-      voices.find((v) => v.lang.startsWith('en'));
+      voices.find((v) => v.lang.startsWith('en')) ||
+      voices[0];
+
     if (femaleVoice) {
       utterance.voice = femaleVoice;
+      utterance.lang = femaleVoice.lang;
     }
     utterance.pitch = 1.05;
     utterance.rate = 1.0;
@@ -151,7 +162,11 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     const ac = new AbortController();
     controller = ac;
 
-    const voiceId = useAppStore.getState?.()?.settings?.voiceId || 'en-IE-EmilyNeural';
+    const isHindi = /[\u0900-\u097F]/.test(trimmed);
+    const configuredVoice = useAppStore.getState?.()?.settings?.voiceId;
+    const voiceId = isHindi
+      ? (configuredVoice && configuredVoice.toLowerCase().startsWith('hi-') ? configuredVoice : 'hi-IN-SwaraNeural')
+      : (configuredVoice || 'en-IE-EmilyNeural');
 
     try {
       let blob: Blob;
@@ -203,8 +218,32 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
         set({ state: 'idle', speakingId: null, error: 'Playback failed', errorId: id });
       };
 
-      await el.play();
-      if (mine === token) set({ state: 'speaking', speakingId: id });
+      try {
+        await el.play();
+        if (mine === token) set({ state: 'speaking', speakingId: id });
+      } catch (playErr) {
+        // Autoplay policy or audio decode fallback to browser speech synthesis
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          const spoken = speakBrowserFemaleVoice(
+            trimmed,
+            () => {
+              if (mine !== token) return;
+              teardown();
+              set({ state: 'idle', speakingId: null });
+            },
+            () => {
+              if (mine !== token) return;
+              teardown();
+              set({ state: 'idle', speakingId: null });
+            },
+          );
+          if (spoken) {
+            if (mine === token) set({ state: 'speaking', speakingId: id });
+            return;
+          }
+        }
+        throw playErr;
+      }
     } catch (err) {
       if (mine !== token) return;
       if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -224,6 +263,18 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     set({ state: 'idle', speakingId: null, error: null, errorId: null });
   },
 }));
+
+/** Pre-warm / unlock browser audio on user gesture so subsequent async speech playback is never blocked */
+export function unlockAudio(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
+    silent.play().catch(() => {});
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.resume();
+    }
+  } catch {}
+}
 
 /** Test seam: reset module-level playback handles between cases. */
 export function __resetTtsForTests(): void {

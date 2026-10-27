@@ -100,14 +100,33 @@ _ANTHROPIC_FIXED_SAMPLING_PREFIXES = (
     "claude-haiku-5-5",
 )
 _GOOGLE_MODELS = [
-    "gemini-2.5-pro",
+    "gemini-3.1-flash-lite",
     "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-3.8-flash",
     "gemini-3-pro",
     "gemini-3-flash",
     "gemini-3.1-pro-preview",
     "gemini-3.1-flash-lite-preview",
     "gemini-3-flash-preview",
 ]
+
+_GOOGLE_MODEL_ALIASES = {
+    "gemini-1.5-flash": "gemini-3.1-flash-lite",
+    "gemini-2.0-flash": "gemini-3.1-flash-lite",
+    "gemini-2.5-flash": "gemini-3.1-flash-lite",
+    "gemini-2.5-pro": "gemini-3.1-flash-lite",
+    "gemini-flash": "gemini-3.1-flash-lite",
+    "gemini-pro": "gemini-3.1-flash-lite",
+    "gemini-flash-lite": "gemini-3.1-flash-lite",
+    "gemini-3.1-flash-lite": "gemini-3.1-flash-lite",
+    "gemini-3.8-flash": "gemini-3.8-flash",
+}
+
+
+def _resolve_google_model(model: str) -> str:
+    return _GOOGLE_MODEL_ALIASES.get(model, model)
+
 _MINIMAX_MODELS = [
     "MiniMax-M3",
     "MiniMax-M2.7",
@@ -967,8 +986,9 @@ class CloudEngine(InferenceEngine):
                     config.response_schema = response_format.schema
 
         t0 = time.monotonic()
+        actual_model = _resolve_google_model(model)
         resp = self._google_client.models.generate_content(
-            model=model,
+            model=actual_model,
             contents=contents,
             config=config,
         )
@@ -1487,8 +1507,9 @@ class CloudEngine(InferenceEngine):
         if system_text:
             config.system_instruction = system_text
 
+        actual_model = _resolve_google_model(model)
         for chunk in self._google_client.models.generate_content_stream(
-            model=model,
+            model=actual_model,
             contents=contents,
             config=config,
         ):
@@ -1572,8 +1593,9 @@ class CloudEngine(InferenceEngine):
         tool_call_count = 0
         stream_id = uuid.uuid4().hex
         final_usage: Dict[str, Any] | None = None
+        actual_model = _resolve_google_model(model)
         for chunk in self._google_client.models.generate_content_stream(
-            model=model,
+            model=actual_model,
             contents=contents,
             config=config,
         ):

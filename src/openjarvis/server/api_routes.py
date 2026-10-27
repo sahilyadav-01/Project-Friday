@@ -1125,7 +1125,18 @@ async def synthesize_speech(request: Request, body: SpeechSynthesizeRequest):
             detail=f"Text exceeds {_MAX_TTS_CHARS} characters",
         )
 
-    backend = await _resolve_tts_backend(request)
+    # If a specific voice is requested, try to use its dedicated backend
+    from openjarvis.speech._tts_discovery import backend_for_voice, get_tts_backend
+
+    backend = None
+    if body.voice_id:
+        target_backend_id = backend_for_voice(body.voice_id)
+        if target_backend_id:
+            backend = get_tts_backend(target_backend_id)
+
+    if backend is None:
+        backend = await _resolve_tts_backend(request)
+
     if backend is None:
         raise HTTPException(
             status_code=501, detail="No text-to-speech backend available"
@@ -1146,8 +1157,23 @@ async def synthesize_speech(request: Request, body: SpeechSynthesizeRequest):
             output_format="wav",
         )
     except Exception as exc:
-        logger.exception("Speech synthesis failed")
-        raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
+        logger.exception("Speech synthesis failed on %s, trying fallback", getattr(backend, 'backend_id', ''))
+        # Try fallback backend if available
+        fallback = await _resolve_tts_backend(request)
+        if fallback and fallback is not backend:
+            try:
+                fallback_voice, _ = _tts_voice_and_speed(request, fallback)
+                result = await asyncio.to_thread(
+                    fallback.synthesize,
+                    text,
+                    voice_id=fallback_voice,
+                    speed=speed,
+                    output_format="wav",
+                )
+            except Exception:
+                raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
+        else:
+            raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
 
     media_type = "audio/mpeg" if getattr(result, "format", "") == "mp3" else "audio/wav"
     return Response(

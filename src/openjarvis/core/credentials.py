@@ -204,12 +204,46 @@ def get_credential_status(tool_name: str) -> dict[str, bool]:
 
 
 def inject_credentials(path: Path | None = None) -> None:
-    """Load credentials.toml and inject into os.environ. Call at server startup."""
+    """Load credentials.toml, cloud-keys.env, and project .env into os.environ."""
     creds = load_credentials(path=path)
     for _tool, kvs in creds.items():
         for k, v in kvs.items():
             if k not in os.environ:
                 os.environ[k] = v
+
+    # Also load cloud-keys.env so cloud engines and routers see API keys
+    cloud_env_file = get_config_dir() / "cloud-keys.env"
+    if cloud_env_file.exists():
+        try:
+            for raw in cloud_env_file.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip()
+                    if k not in os.environ:
+                        os.environ[k] = v
+                    if k == "GEMINI_API_KEY" and "GOOGLE_API_KEY" not in os.environ:
+                        os.environ["GOOGLE_API_KEY"] = v
+        except Exception as exc:
+            logger.debug("Failed to read cloud-keys.env in inject_credentials: %s", exc)
+
+    # Also read project .env if present
+    env_file = Path(".env")
+    if env_file.exists():
+        try:
+            for raw in env_file.read_text(encoding="utf-8").splitlines():
+                line = raw.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip()
+                    if k not in os.environ:
+                        os.environ[k] = v
+                    if k == "GEMINI_API_KEY" and "GOOGLE_API_KEY" not in os.environ:
+                        os.environ["GOOGLE_API_KEY"] = v
+        except Exception as exc:
+            logger.debug("Failed to read .env in inject_credentials: %s", exc)
 
 
 def get_tool_credential(

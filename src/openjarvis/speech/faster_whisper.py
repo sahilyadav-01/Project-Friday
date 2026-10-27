@@ -87,11 +87,26 @@ class FasterWhisperBackend(SpeechBackend):
                 )
                 raise ImportError(self._last_error)
             compute_type = self._resolve_compute_type()
-            self._model = WhisperModel(
-                self._model_size,
-                device=self._device,
-                compute_type=compute_type,
-            )
+            try:
+                self._model = WhisperModel(
+                    self._model_size,
+                    device=self._device,
+                    compute_type=compute_type,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Faster-Whisper failed to initialize on device=%r (compute_type=%r): %s. Falling back to CPU int8.",
+                    self._device,
+                    compute_type,
+                    exc,
+                )
+                self._model = WhisperModel(
+                    self._model_size,
+                    device="cpu",
+                    compute_type="int8",
+                )
+                self._device = "cpu"
+                self._compute_type = "int8"
         self._last_error = None
         return self._model
 
@@ -120,8 +135,27 @@ class FasterWhisperBackend(SpeechBackend):
                 if language:
                     kwargs["language"] = language
 
-                segments_iter, info = model.transcribe(tmp.name, **kwargs)
-                segments_list = list(segments_iter)
+                try:
+                    segments_iter, info = model.transcribe(tmp.name, **kwargs)
+                    segments_list = list(segments_iter)
+                except Exception as transcribe_err:
+                    if self._device != "cpu":
+                        logger.warning(
+                            "Transcription failed on %s: %s. Retrying on CPU int8...",
+                            self._device,
+                            transcribe_err,
+                        )
+                        self._model = WhisperModel(
+                            self._model_size,
+                            device="cpu",
+                            compute_type="int8",
+                        )
+                        self._device = "cpu"
+                        self._compute_type = "int8"
+                        segments_iter, info = self._model.transcribe(tmp.name, **kwargs)
+                        segments_list = list(segments_iter)
+                    else:
+                        raise
             finally:
                 try:
                     os.unlink(tmp.name)

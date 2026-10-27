@@ -8,6 +8,7 @@ import { shouldAutoplayFinishedReply, useTtsStore } from '../../lib/tts';
 import { stripThinkTags } from '../../lib/message-text';
 import { Sparkles, PanelRightOpen, PanelRightClose, Database, MessageSquare, X } from 'lucide-react';
 import { listConnectors } from '../../lib/connectors-api';
+import { ApprovalBell } from '../ApprovalBell';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -34,6 +35,7 @@ export function ChatArea() {
   // autoSpokenId fences the message so re-renders cannot repeat it.
   const voiceOutputEnabled = useAppStore((s) => s.settings.voiceOutputEnabled);
   const voiceAutoplay = useAppStore((s) => s.settings.voiceAutoplay);
+  const setVoiceModalOpen = useAppStore((s) => s.setVoiceModalOpen);
   const userName = useAppStore((s) => s.settings.userName) || 'Sahil Yadav';
   const firstName = userName.split(' ')[0] || 'Sahil';
   // Probe the backend as soon as voice output is switched on. Without this the
@@ -137,10 +139,11 @@ export function ChatArea() {
   return (
     <div className="flex flex-col h-full">
       {/* Toggle bar */}
-      <div className="flex items-center justify-end px-3 py-1.5 shrink-0">
+      <div className="flex items-center justify-end px-4 py-2 shrink-0 gap-2">
+        <ApprovalBell embedded />
         <button
           onClick={toggleSystemPanel}
-          className="p-1.5 rounded-md transition-colors cursor-pointer"
+          className="p-1.5 rounded-lg transition-colors cursor-pointer hover:bg-white/5"
           style={{ color: 'var(--color-text-tertiary)' }}
           title={`${systemPanelOpen ? 'Hide' : 'Show'} system panel (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+I)`}
         >
@@ -185,15 +188,19 @@ export function ChatArea() {
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center h-full px-4 text-center">
             {/* Glowing F.R.I.D.A.Y. Arc Reactor Core */}
-            <div className="relative mb-5 flex items-center justify-center group cursor-pointer" onClick={() => navigate('/dashboard')}>
+            <div
+              className="relative mb-5 flex items-center justify-center group cursor-pointer"
+              onClick={() => setVoiceModalOpen(true)}
+              title="Launch F.R.I.D.A.Y. Voice Assistant (Talk with Friday)"
+            >
               <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/35 to-cyan-500/25 blur-xl group-hover:blur-2xl transition-all animate-pulse" />
               <img
                 src="/friday-core.jpg"
                 alt="F.R.I.D.A.Y. HUD Core"
-                className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-700 group-hover:scale-105"
+                className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-700 group-hover:scale-110"
               />
-              <span className="absolute -bottom-2.5 px-3 py-0.5 rounded-full text-[10px] font-mono tracking-widest bg-black/85 text-orange-400 border border-orange-500/50 backdrop-blur-md uppercase shadow-md">
-                F.R.I.D.A.Y. ONLINE
+              <span className="absolute -bottom-2.5 px-3 py-0.5 rounded-full text-[10px] font-mono tracking-widest bg-black/85 text-orange-400 border border-orange-500/50 backdrop-blur-md uppercase shadow-md group-hover:bg-orange-500 group-hover:text-black transition-all">
+                VOICE CORE • TALK
               </span>
             </div>
 

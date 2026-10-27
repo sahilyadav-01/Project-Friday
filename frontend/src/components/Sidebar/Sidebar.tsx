@@ -32,6 +32,7 @@ export function Sidebar() {
   const selectedModel = useAppStore((s) => s.selectedModel);
   const serverInfo = useAppStore((s) => s.serverInfo);
   const setCommandPaletteOpen = useAppStore((s) => s.setCommandPaletteOpen);
+  const setVoiceModalOpen = useAppStore((s) => s.setVoiceModalOpen);
   const modelLoading = useAppStore((s) => s.modelLoading);
   const deepResearch = useAppStore((s) => s.deepResearch);
 
@@ -80,9 +81,9 @@ export function Sidebar() {
 
           {/* F.R.I.D.A.Y. Holographic Arc Reactor Core */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => setVoiceModalOpen(true)}
             className="relative w-10 h-10 rounded-full cursor-pointer transition-transform duration-300 hover:scale-110 group focus:outline-none"
-            title="F.R.I.D.A.Y. AI Assistant Core"
+            title="Launch F.R.I.D.A.Y. Voice Assistant (Talk with Friday)"
           >
             <div className="absolute -inset-1 rounded-full bg-orange-500/30 blur-sm group-hover:bg-orange-500/50 transition-all animate-pulse" />
             <img
