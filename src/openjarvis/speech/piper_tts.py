@@ -247,18 +247,17 @@ class PiperTTSBackend(TTSBackend):
 
     # ------------------------------------------------------------------
     def health(self) -> bool:
-        """Check if Piper is available (or can be downloaded)."""
+        """Check if Piper is available."""
         try:
             exe = _PIPER_DIR / "piper.exe"
-            if exe.exists():
-                r = subprocess.run(
-                    [str(exe), "--help"],
-                    capture_output=True,
-                    timeout=5,
-                )
-                return r.returncode == 0
-            # Binary not yet downloaded — treat as healthy (will download on demand)
-            return sys.platform == "win32"
+            if not exe.exists():
+                return False
+            r = subprocess.run(
+                [str(exe), "--help"],
+                capture_output=True,
+                timeout=5,
+            )
+            return r.returncode == 0
         except Exception:
             return False
 

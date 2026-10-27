@@ -1157,22 +1157,17 @@ async def synthesize_speech(request: Request, body: SpeechSynthesizeRequest):
             output_format="wav",
         )
     except Exception as exc:
-        logger.exception("Speech synthesis failed on %s, trying fallback", getattr(backend, 'backend_id', ''))
-        # Try fallback backend if available
-        fallback = await _resolve_tts_backend(request)
-        if fallback and fallback is not backend:
-            try:
-                fallback_voice, _ = _tts_voice_and_speed(request, fallback)
-                result = await asyncio.to_thread(
-                    fallback.synthesize,
-                    text,
-                    voice_id=fallback_voice,
-                    speed=speed,
-                    output_format="wav",
-                )
-            except Exception:
-                raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
-        else:
+        logger.exception("Speech synthesis failed on %s, trying Edge TTS fallback", getattr(backend, 'backend_id', ''))
+        try:
+            from openjarvis.speech.edge_tts_backend import EdgeTTSBackend
+            edge_fallback = EdgeTTSBackend()
+            result = await asyncio.to_thread(
+                edge_fallback.synthesize,
+                text,
+                speed=speed,
+                output_format="mp3",
+            )
+        except Exception:
             raise HTTPException(status_code=500, detail="Speech synthesis failed") from exc
 
     media_type = "audio/mpeg" if getattr(result, "format", "") == "mp3" else "audio/wav"

@@ -1,4 +1,5 @@
 import os
+# pyrefly: ignore[missing-import]
 from PIL import Image, ImageDraw
 
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
