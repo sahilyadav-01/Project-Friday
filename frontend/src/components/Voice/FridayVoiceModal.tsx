@@ -604,13 +604,16 @@ Crucial Voice Rules:
   // Test Friday's Voice Output
   const handleTestVoice = async () => {
     unlockAudio();
+    stopListening();
     const testId = generateId();
+    const voiceId = language === 'hi-IN' ? 'hi-IN-SwaraNeural' : 'en-IE-EmilyNeural';
     const greeting = language === 'hi-IN'
       ? `नमस्ते ${firstName}, एफ.आर.आई.डी.ए.वाई. की आवाज़ सक्रिय है। आप क्या पूछना चाहते हैं?`
       : `Audio channels calibrated, ${firstName}. All neural systems online.`;
     setAssistantReply(greeting);
+    statusRef.current = 'speaking';
     setStatus('speaking');
-    await speakTts(testId, greeting);
+    await speakTts(testId, greeting, { voiceId });
   };
 
   // Interrupt / Stop
