@@ -23,7 +23,7 @@ interface TtsStore {
   available: boolean | null;
   /** Last message spoken by autoplay, so a re-render never repeats it. */
   autoSpokenId: string | null;
-  speak: (id: string, text: string) => Promise<void>;
+  speak: (id: string, text: string, options?: { voiceId?: string }) => Promise<void>;
   stop: () => void;
   ensureHealth: () => Promise<void>;
   markAutoSpoken: (id: string) => void;
@@ -34,8 +34,20 @@ interface TtsStore {
 let audio: HTMLAudioElement | null = null;
 let objectUrl: string | null = null;
 let controller: AbortController | null = null;
+let activeSourceNode: AudioBufferSourceNode | null = null;
+let sharedAudioCtx: AudioContext | null = null;
 let token = 0;
 let healthProbe: Promise<void> | null = null;
+
+export function getSharedAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+  if (!AudioContextClass) return null;
+  if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+    sharedAudioCtx = new AudioContextClass();
+  }
+  return sharedAudioCtx;
+}
 
 function speakBrowserFemaleVoice(
   text: string,
@@ -98,6 +110,14 @@ export function shouldAutoplayFinishedReply(
 }
 
 function teardown(): void {
+  if (activeSourceNode) {
+    try {
+      activeSourceNode.onended = null;
+      activeSourceNode.stop();
+      activeSourceNode.disconnect();
+    } catch {}
+    activeSourceNode = null;
+  }
   if (audio) {
     audio.onended = null;
     audio.onerror = null;
@@ -148,7 +168,7 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
 
   markAutoSpoken: (id: string) => set({ autoSpokenId: id }),
 
-  speak: async (id: string, text: string) => {
+  speak: async (id: string, text: string, options?: { voiceId?: string }) => {
     const trimmed = toSpeakableText(text);
     if (!trimmed) return;
 
@@ -163,7 +183,7 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
     controller = ac;
 
     const isHindi = /[\u0900-\u097F]/.test(trimmed);
-    const configuredVoice = useAppStore.getState?.()?.settings?.voiceId;
+    const configuredVoice = options?.voiceId || useAppStore.getState?.()?.settings?.voiceId;
     const voiceId = isHindi
       ? (configuredVoice && configuredVoice.toLowerCase().startsWith('hi-') ? configuredVoice : 'hi-IN-SwaraNeural')
       : (configuredVoice || 'en-IE-EmilyNeural');
@@ -202,6 +222,39 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
 
       if (mine !== token) return;
 
+      // Strategy 1: High-performance AudioContext playback (immune to tag autoplay blocking)
+      const ctx = getSharedAudioContext();
+      if (ctx) {
+        try {
+          if (ctx.state === 'suspended') {
+            await ctx.resume().catch(() => {});
+          }
+          if (ctx.state === 'running') {
+            const arrayBuf = await blob.arrayBuffer();
+            const decodedBuffer = await ctx.decodeAudioData(arrayBuf.slice(0));
+            if (mine !== token) return;
+
+            const source = ctx.createBufferSource();
+            source.buffer = decodedBuffer;
+            source.connect(ctx.destination);
+            activeSourceNode = source;
+
+            source.onended = () => {
+              if (mine !== token) return;
+              teardown();
+              set({ state: 'idle', speakingId: null });
+            };
+
+            source.start(0);
+            if (mine === token) set({ state: 'speaking', speakingId: id });
+            return;
+          }
+        } catch {
+          // Fall back to Audio element
+        }
+      }
+
+      // Strategy 2: HTMLAudioElement playback
       const url = URL.createObjectURL(blob);
       objectUrl = url;
       const el = new Audio(url);
@@ -222,7 +275,7 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
         await el.play();
         if (mine === token) set({ state: 'speaking', speakingId: id });
       } catch (playErr) {
-        // Autoplay policy or audio decode fallback to browser speech synthesis
+        // Strategy 3: Fallback to browser speech synthesis
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           const spoken = speakBrowserFemaleVoice(
             trimmed,
@@ -268,6 +321,10 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
 export function unlockAudio(): void {
   if (typeof window === 'undefined') return;
   try {
+    const ctx = getSharedAudioContext();
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
     const silent = new Audio('data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA');
     silent.play().catch(() => {});
     if ('speechSynthesis' in window) {
