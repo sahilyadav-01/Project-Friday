@@ -20,7 +20,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { useAppStore, type ThemeMode } from '../lib/store';
-import { useTtsStore } from '../lib/tts';
+import { useTtsStore, unlockAudio } from '../lib/tts';
 import {
   checkHealth,
   fetchSpeechHealth,
@@ -299,17 +299,18 @@ export function SettingsPage() {
   const [isTestingVoice, setIsTestingVoice] = useState(false);
 
   const handleTestVoice = useCallback(async () => {
+    unlockAudio();
     setIsTestingVoice(true);
     try {
-      const voiceId = settings.voiceId || '';
+      const voiceId = settings.voiceId || 'hi-IN-SwaraNeural';
       const isHindi = voiceId.startsWith('hi-') || voiceId.startsWith('hi_');
       const isPiper = voiceId.includes('_') && !voiceId.startsWith('hi-');
       const testMsg = isHindi
         ? 'नमस्ते साहिल, फ्राइडे वॉइस असिस्टेंट तैयार है।'
         : isPiper
-          ? `Hello Sahil! This is the offline Piper voice. I am Friday, your personal AI assistant. Systems are online.`
+          ? `Hello Sahil! This is the offline Piper voice. I am Friday, systems are online.`
           : 'Hello Sahil, Friday voice assistant is online and ready.';
-      await useTtsStore.getState().speak('settings-test', testMsg);
+      await useTtsStore.getState().speak('settings-test', testMsg, { voiceId });
     } finally {
       setIsTestingVoice(false);
     }
