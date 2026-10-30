@@ -297,6 +297,9 @@ export function SettingsPage() {
   const [ttsBackend, setTtsBackend] = useState<{ available: boolean; backend?: string; voice_id?: string } | null>(null);
   const [saved, setSaved] = useState(false);
   const [isTestingVoice, setIsTestingVoice] = useState(false);
+  const ttsState = useTtsStore((s) => s.state);
+  const ttsSpeakingId = useTtsStore((s) => s.speakingId);
+  const isSpeakingTest = isTestingVoice || (ttsState !== 'idle' && ttsSpeakingId === 'settings-test');
 
   const handleTestVoice = useCallback(async () => {
     unlockAudio();
@@ -880,7 +883,7 @@ export function SettingsPage() {
             <SettingRow label="Voice Profile" description="Select voice assistant persona (Girl/Female voices recommended for F.R.I.D.A.Y.)">
               <div className="flex items-center gap-2">
                 <select
-                  value={settings.voiceId || 'en-IE-EmilyNeural'}
+                  value={settings.voiceId || 'hi-IN-SwaraNeural'}
                   onChange={(e) => {
                     updateSettings({ voiceId: e.target.value });
                     showSaved();
@@ -913,7 +916,7 @@ export function SettingsPage() {
                 <button
                   type="button"
                   onClick={handleTestVoice}
-                  disabled={isTestingVoice}
+                  disabled={isSpeakingTest}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors shadow-sm disabled:opacity-50"
                   style={{
                     background: 'var(--color-accent)',
@@ -921,8 +924,8 @@ export function SettingsPage() {
                   }}
                   title="Test voice audio"
                 >
-                  <Volume2 size={13} className={isTestingVoice ? 'animate-bounce' : ''} />
-                  {isTestingVoice ? 'Speaking...' : 'Test Voice'}
+                  <Volume2 size={13} className={isSpeakingTest ? 'animate-bounce' : ''} />
+                  {isSpeakingTest ? 'Speaking...' : 'Test Voice'}
                 </button>
               </div>
             </SettingRow>

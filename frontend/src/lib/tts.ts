@@ -276,36 +276,40 @@ export const useTtsStore = create<TtsStore>((set, get) => ({
 
       if (mine !== token) return;
 
-      // Strategy 1: Shared AudioContext playback with volume gain node
+      // Strategy 1: Shared AudioContext playback with volume gain node (ONLY if actively running)
       const ctx = getSharedAudioContext();
       if (ctx) {
-        try {
-          if (ctx.state === 'suspended') {
-            await ctx.resume().catch(() => {});
-          }
-          const arrayBuf = await blob.arrayBuffer();
-          const decodedBuffer = await decodeAudioDataSafe(ctx, arrayBuf);
-          if (mine !== token) return;
-
-          const source = ctx.createBufferSource();
-          source.buffer = decodedBuffer;
-          const gainNode = ctx.createGain();
-          gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
-          source.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          activeSourceNode = source;
-
-          source.onended = () => {
+        if (ctx.state === 'suspended') {
+          await ctx.resume().catch(() => {});
+        }
+        if (ctx.state === 'running') {
+          try {
+            const arrayBuf = await blob.arrayBuffer();
+            const decodedBuffer = await decodeAudioDataSafe(ctx, arrayBuf);
             if (mine !== token) return;
-            teardown();
-            set({ state: 'idle', speakingId: null });
-          };
 
-          source.start(0);
-          if (mine === token) set({ state: 'speaking', speakingId: id });
-          return;
-        } catch (ctxErr) {
-          console.warn('[Friday Voice] AudioContext strategy error:', ctxErr);
+            const source = ctx.createBufferSource();
+            source.buffer = decodedBuffer;
+            const gainNode = ctx.createGain();
+            gainNode.gain.setValueAtTime(1.0, ctx.currentTime);
+            source.connect(gainNode);
+            gainNode.connect(ctx.destination);
+            activeSourceNode = source;
+
+            source.onended = () => {
+              if (mine !== token) return;
+              teardown();
+              set({ state: 'idle', speakingId: null });
+            };
+
+            source.start(0);
+            if (mine === token) set({ state: 'speaking', speakingId: id });
+            return;
+          } catch (ctxErr) {
+            console.warn('[Friday Voice] AudioContext strategy error:', ctxErr);
+          }
+        } else {
+          console.warn('[Friday Voice] AudioContext not running (' + ctx.state + '), falling through to HTMLAudioElement');
         }
       }
 

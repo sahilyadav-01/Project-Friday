@@ -746,11 +746,14 @@ Crucial Voice Rules:
             {/* Test Voice Button */}
             <button
               onClick={handleTestVoice}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-xs text-orange-300 transition-colors cursor-pointer"
+              disabled={status === 'speaking'}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/40 text-xs text-orange-300 transition-colors cursor-pointer disabled:opacity-50"
               title="Test F.R.I.D.A.Y. Voice Output"
             >
-              <Play size={13} className="fill-current" />
-              <span className="font-mono text-[11px] font-semibold">Test Voice</span>
+              <Play size={13} className={`fill-current ${status === 'speaking' ? 'animate-spin' : ''}`} />
+              <span className="font-mono text-[11px] font-semibold">
+                {status === 'speaking' ? 'Speaking...' : 'Test Voice'}
+              </span>
             </button>
 
             {/* Language Selector */}
