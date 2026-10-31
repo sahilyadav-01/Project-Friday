@@ -48,7 +48,7 @@ export function Layout() {
   const navigate = useNavigate();
 
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden relative" style={{ paddingTop: '3px' }}>
+    <div className="app-shell flex flex-col h-full w-full overflow-hidden relative">
       <div className="hud-backdrop" aria-hidden="true" />
       <SystemPulse apiReachable={apiReachable} />
       {!isEmbeddedPage && <ApprovalBell />}
@@ -78,7 +78,7 @@ export function Layout() {
         </div>
       )}
 
-      <div className="flex flex-1 min-h-0 relative z-10" style={{ background: '#0D0E12' }}>
+      <div className="app-frame flex flex-1 min-h-0 relative z-10">
         <Sidebar />
         {sidebarOpen && (
           <div
@@ -87,13 +87,7 @@ export function Layout() {
           />
         )}
         <main
-          className="flex-1 flex flex-col min-w-0 h-full relative overflow-hidden transition-all duration-200"
-          style={{
-            background: 'var(--color-bg)',
-            borderTopLeftRadius: '24px',
-            borderBottomLeftRadius: '24px',
-            boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.25)',
-          }}
+          className="app-main flex-1 flex flex-col min-w-0 h-full relative overflow-hidden transition-all duration-200"
         >
           <div className="flex-1 flex flex-col min-w-0 min-h-0 relative z-[2]">
             <Outlet />

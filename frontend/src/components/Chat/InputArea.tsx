@@ -594,7 +594,7 @@ export function InputArea() {
   };
 
   return (
-    <div className="px-4 pb-4 pt-2" style={{ maxWidth: 'var(--chat-max-width)', margin: '0 auto', width: '100%' }}>
+    <div className="composer-wrap px-4 md:px-8 pb-5 pt-3" style={{ maxWidth: 'var(--chat-max-width)', margin: '0 auto', width: '100%' }}>
       <div className="mb-2 flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <button
@@ -628,11 +628,11 @@ export function InputArea() {
         )}
       </div>
       <div
-        className="flex items-center gap-2 rounded-2xl px-4 py-3 transition-shadow"
+        className="composer flex items-end gap-2 rounded-2xl px-4 py-3 transition-all"
         style={{
           background: 'var(--color-input-bg)',
           border: '1px solid var(--color-input-border)',
-          boxShadow: 'var(--shadow-sm)',
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
         <textarea
@@ -640,9 +640,9 @@ export function InputArea() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={effectiveModel ? 'Message Friday...' : `${pickModelText}...`}
+          placeholder={effectiveModel ? 'Message Friday... (e.g. system status, calculations, search)' : `${pickModelText}...`}
           rows={1}
-          className="flex-1 bg-transparent outline-none resize-none text-sm leading-relaxed"
+          className="flex-1 bg-transparent outline-none resize-none text-[15px] leading-relaxed py-1"
           style={{ color: 'var(--color-text)', maxHeight: '200px' }}
           disabled={streamState.isStreaming || modelLoading}
         />
@@ -667,7 +667,7 @@ export function InputArea() {
               onClick={sendMessage}
               disabled={streamState.isStreaming || !input.trim() || modelLoading || !effectiveModel}
               title={effectiveModel ? 'Send message' : pickModelText}
-              className="p-2 rounded-xl transition-colors shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-default"
+              className="send-button p-2.5 rounded-xl transition-all shrink-0 cursor-pointer disabled:opacity-30 disabled:cursor-default"
               style={{
                 background: input.trim() ? 'var(--color-accent)' : 'var(--color-bg-tertiary)',
                 color: input.trim() ? 'white' : 'var(--color-text-tertiary)',
@@ -678,10 +678,14 @@ export function InputArea() {
           </div>
         )}
       </div>
-      <div className="flex items-center justify-center mt-2 text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
+      <div className="flex items-center justify-between mt-2.5 px-1 text-[11px] tracking-wide" style={{ color: 'var(--color-text-tertiary)' }}>
+        <div className="flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Friday AI Online</span>
+        </div>
         <span>
-          <kbd className="font-mono">Enter</kbd> to send &middot;{' '}
-          <kbd className="font-mono">Shift+Enter</kbd> for new line
+          <kbd className="font-mono px-1 py-0.5 rounded text-[10px]" style={{ background: 'var(--color-bg-tertiary)' }}>Enter</kbd> to send &middot;{' '}
+          <kbd className="font-mono px-1 py-0.5 rounded text-[10px]" style={{ background: 'var(--color-bg-tertiary)' }}>Shift+Enter</kbd> new line
         </span>
       </div>
     </div>

@@ -17,6 +17,7 @@ import {
   Sun,
   Moon,
   Loader2,
+  Command,
 } from 'lucide-react';
 import { ConversationList } from './ConversationList';
 import { useAppStore } from '../../lib/store';
@@ -65,36 +66,27 @@ export function Sidebar() {
     <div className="flex h-full shrink-0 z-30 select-none">
       {/* ── Mini Icon Dock (Matching Reference Screenshot) ── */}
       <aside
-        className="w-16 md:w-[70px] h-full flex flex-col items-center justify-between py-4 shrink-0 transition-colors"
-        style={{
-          background: '#0D0E12',
-          borderRight: '1px solid rgba(255, 255, 255, 0.07)',
-        }}
+        className="nav-rail w-[72px] h-full flex flex-col items-center justify-between py-4 shrink-0 transition-colors"
       >
         {/* Top: Mac Window Control Dots & F.R.I.D.A.Y. Core */}
-        <div className="flex flex-col items-center gap-4 w-full">
-          <div className="flex items-center gap-1.5 pt-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FF5F56] shadow-xs cursor-pointer hover:opacity-80 transition-opacity" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E] shadow-xs cursor-pointer hover:opacity-80 transition-opacity" />
-            <span className="w-2.5 h-2.5 rounded-full bg-[#27C93F] shadow-xs cursor-pointer hover:opacity-80 transition-opacity" />
-          </div>
+        <div className="flex flex-col items-center gap-5 w-full">
 
           {/* F.R.I.D.A.Y. Holographic Arc Reactor Core */}
           <button
             onClick={() => setVoiceModalOpen(true)}
-            className="relative w-10 h-10 rounded-full cursor-pointer transition-transform duration-300 hover:scale-110 group focus:outline-none"
+            className="nav-core relative w-11 h-11 rounded-2xl cursor-pointer transition-transform duration-300 hover:scale-105 group focus:outline-none"
             title="Launch F.R.I.D.A.Y. Voice Assistant (Talk with Friday)"
           >
-            <div className="absolute -inset-1 rounded-full bg-orange-500/30 blur-sm group-hover:bg-orange-500/50 transition-all animate-pulse" />
+            <div className="absolute -inset-1 rounded-2xl bg-orange-500/20 blur-md group-hover:bg-orange-500/40 transition-all" />
             <img
               src="/friday-core.jpg"
               alt="F.R.I.D.A.Y. Core"
-              className="relative w-full h-full rounded-full object-cover ring-2 ring-orange-500/70 shadow-md shadow-orange-500/30"
+              className="relative w-full h-full rounded-2xl object-cover ring-1 ring-orange-400/70 shadow-lg shadow-orange-500/20"
             />
           </button>
 
           {/* Navigation Icon Stack */}
-          <nav className="flex flex-col items-center gap-2.5 w-full px-2">
+          <nav className="flex flex-col items-center gap-1.5 w-full px-2">
             {dockNavItems.map((item) => {
               const isActive =
                 item.path === '/'
@@ -112,15 +104,15 @@ export function Sidebar() {
                     }
                   }}
                   className={`
-                    w-11 h-11 rounded-2xl flex items-center justify-center transition-all duration-200 cursor-pointer relative group
-                    ${isActive ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-500/30' : 'text-zinc-400 hover:text-white hover:bg-white/10'}
+                    nav-rail-button w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200 cursor-pointer relative group
+                    ${isActive ? 'is-active text-white' : 'text-zinc-500 hover:text-white'}
                   `}
                   title={item.label}
                 >
                   <item.icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
 
                   {/* Tooltip */}
-                  <span className="absolute left-full ml-3 px-2 py-1 rounded-md bg-zinc-900 text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md z-50">
+                  <span className="absolute left-full ml-3 px-2.5 py-1.5 rounded-lg bg-zinc-950 text-white text-[11px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-50">
                     {item.label}
                   </span>
                 </button>
@@ -131,41 +123,33 @@ export function Sidebar() {
 
         {/* Bottom: Sun/Moon Pill Switch & Profile Avatar */}
         <div className="flex flex-col items-center gap-4 w-full">
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-white hover:bg-white/8"
+            title="Command palette"
+          >
+            <Command size={17} />
+          </button>
+
           {/* History drawer toggle button */}
           <button
             onClick={toggleSidebar}
             className={`
-              w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer text-zinc-400 hover:text-white hover:bg-white/10
-              ${sidebarOpen ? 'bg-white/15 text-white' : ''}
+              w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-white hover:bg-white/8
+              ${sidebarOpen ? 'bg-white/10 text-white' : ''}
             `}
             title={sidebarOpen ? 'Collapse chat history' : 'Open chat history'}
           >
             {sidebarOpen ? <PanelLeftClose size={17} /> : <PanelLeft size={17} />}
           </button>
 
-          {/* Vertical Theme Capsule Switch */}
-          <div
-            className="flex flex-col items-center p-1 rounded-full bg-zinc-900 border border-white/10 gap-1"
+          <button
+            onClick={() => updateSettings({ theme: isDark ? 'light' : 'dark' })}
+            className="w-9 h-9 rounded-xl flex items-center justify-center transition-colors cursor-pointer text-zinc-500 hover:text-white hover:bg-white/8"
+            title={isDark ? 'Use light theme' : 'Use dark theme'}
           >
-            <button
-              onClick={() => updateSettings({ theme: 'light' })}
-              className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                !isDark ? 'bg-white text-zinc-900 shadow-xs' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Light theme"
-            >
-              <Sun size={13} />
-            </button>
-            <button
-              onClick={() => updateSettings({ theme: 'dark' })}
-              className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                isDark ? 'bg-zinc-800 text-white shadow-xs' : 'text-zinc-500 hover:text-zinc-300'
-              }`}
-              title="Dark theme"
-            >
-              <Moon size={13} />
-            </button>
-          </div>
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
 
           {/* User Profile Avatar with ring */}
           <button
@@ -188,21 +172,18 @@ export function Sidebar() {
       {/* ── Collapsible Conversation History Drawer ── */}
       {sidebarOpen && (
         <aside
-          className="w-[240px] h-full flex flex-col shrink-0 overflow-hidden transition-all duration-200 border-r"
-          style={{
-            background: 'var(--color-sidebar)',
-            borderColor: 'var(--color-border)',
-            backdropFilter: 'blur(20px)',
-          }}
+          className="history-drawer w-[272px] h-full flex flex-col shrink-0 overflow-hidden transition-all duration-200"
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-3 pt-3.5 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-              Chats
-            </span>
+          <div className="flex items-center justify-between px-4 pt-5 pb-3">
+            <div>
+              <span className="block text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Conversations</span>
+              <span className="block text-[11px] mt-0.5" style={{ color: 'var(--color-text-tertiary)' }}>Recent work with Friday</span>
+            </div>
             <button
               onClick={handleNewChat}
-              className="p-1.5 rounded-lg transition-colors cursor-pointer text-zinc-400 hover:text-zinc-100 hover:bg-white/10"
+              className="p-2 rounded-xl transition-colors cursor-pointer"
+              style={{ color: 'var(--color-on-accent)', background: 'var(--color-accent)' }}
               title="New chat"
             >
               <Plus size={16} />
@@ -212,7 +193,7 @@ export function Sidebar() {
           {/* Model badge */}
           <button
             onClick={() => setCommandPaletteOpen(true)}
-            className="mx-2.5 mb-2 flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer"
+            className="mx-3 mb-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-colors cursor-pointer"
             style={{
               background: 'var(--color-bg-secondary)',
               color: 'var(--color-text-secondary)',
@@ -233,9 +214,9 @@ export function Sidebar() {
           </button>
 
           {/* Search chats */}
-          <div className="px-2.5 mb-2">
+          <div className="px-3 mb-3">
             <div
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs"
+              className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs"
               style={{ background: 'var(--color-bg-secondary)', border: '1px solid var(--color-border)' }}
             >
               <Search size={13} className="text-zinc-400" />
@@ -251,7 +232,7 @@ export function Sidebar() {
           </div>
 
           {/* Conversation List */}
-          <div className="flex-1 overflow-y-auto px-2">
+          <div className="flex-1 overflow-y-auto px-3 pb-3">
             <ConversationList searchQuery={searchQuery} />
           </div>
         </aside>

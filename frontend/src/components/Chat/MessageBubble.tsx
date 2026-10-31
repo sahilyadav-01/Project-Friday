@@ -119,9 +119,9 @@ export function MessageBubble({ message, isLive = false }: Props) {
 
   if (isUser) {
     return (
-      <div className="flex justify-end mb-4">
+      <div className="flex justify-end mb-6">
         <div
-          className="max-w-[85%] px-4 py-2.5 text-sm leading-relaxed"
+          className="user-message max-w-[82%] px-4 py-3 text-sm leading-relaxed"
           style={{
             background: 'var(--color-user-bubble)',
             color: 'var(--color-user-bubble-text)',
@@ -137,7 +137,7 @@ export function MessageBubble({ message, isLive = false }: Props) {
   }
 
   return (
-    <div className="group mb-6">
+    <div className="assistant-message group mb-8">
       {/* Deep Research timeline (steps + status) */}
       {(message.isResearch || (message.researchTraces && message.researchTraces.length > 0)) && (
         <ResearchTimeline
@@ -157,12 +157,12 @@ export function MessageBubble({ message, isLive = false }: Props) {
       )}
 
       {/* Assistant branding badge */}
-      <div className="flex items-center gap-1.5 mb-1.5 select-none">
-        <div className="relative w-4 h-4 rounded-full overflow-hidden ring-1 ring-orange-500/70 shadow-xs">
+      <div className="flex items-center gap-2 mb-3 select-none">
+        <div className="relative w-6 h-6 rounded-lg overflow-hidden ring-1 ring-orange-500/60 shadow-sm">
           <img src="/friday-core.jpg" alt="F.R.I.D.A.Y." className="w-full h-full object-cover" />
         </div>
-        <span className="text-[11px] font-bold tracking-wider uppercase text-orange-500 dark:text-orange-400">
-          F.R.I.D.A.Y.
+        <span className="text-[11px] font-semibold tracking-[0.12em] uppercase text-orange-500 dark:text-orange-400">
+          Friday
         </span>
       </div>
 

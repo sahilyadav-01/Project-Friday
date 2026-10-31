@@ -79,9 +79,9 @@ export function SystemPanel() {
     <div
       className="flex flex-col h-full overflow-y-auto"
       style={{
-        width: 280,
-        minWidth: 280,
-        background: 'var(--color-bg)',
+        width: 304,
+        minWidth: 304,
+        background: 'var(--color-panel)',
         borderLeft: '1px solid var(--color-border)',
       }}
     >

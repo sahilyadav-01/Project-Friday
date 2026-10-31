@@ -2,7 +2,7 @@
   <img alt="Friday logo" src="frontend/public/pwa-192x192.png" width="160">
   <h1>Friday</h1>
   <p><strong>Personal AI assistant for your computer.</strong></p>
-  <p>Built and maintained by Sahil Yadav.</p>
+  <p>Built and maintained by <strong>Sahil Yadav</strong> &middot; Copyright &copy; 2026 Sahil Yadav</p>
 </div>
 
 Friday is a local-first personal AI assistant with a command-line interface and
@@ -12,19 +12,20 @@ and developer workflows.
 
 ## Features
 
-- Chat with local models or a configured inference server.
-- Launch a browser GUI with `friday gui`.
-- Create and run agents with tools, memory, schedules, and channels.
-- Connect supported personal data sources for search and context.
-- Inspect setup health with `friday doctor`.
-- Keep configuration and assistant data on your computer by default.
+- **Multi-Engine Intelligence**: Chat with local models (Ollama, vLLM, llama.cpp) or cloud providers (ChatGPT/OpenAI, Google Gemini, Claude).
+- **Voice & Speech**: Real-time voice interaction with local Speech-to-Text (`faster-whisper`) and neural Text-to-Speech (`edge-tts` & `kokoro`).
+- **Graphical Web Dashboard**: Modern browser interface with chat, model picker, and settings (`friday gui`).
+- **Autonomous Agents & Custom Tools**: Create and run agents with extensible tools (`system_status`, `calculator`, `web_search`, `file_read`, etc.).
+- **Memory & Personal Data**: Connect personal data sources with persistent memory store and context search.
+- **Diagnostic System Health**: One-command diagnostic checks with `friday doctor`.
+- **Privacy First**: Keeps configuration and assistant data local on your device.
 
 ## Requirements
 
 - Python 3.10 to 3.13
 - [uv](https://docs.astral.sh/uv/)
 - Node.js 22 or newer for the browser GUI
-- Ollama or another configured inference server
+- Ollama or another configured inference server / cloud API keys
 
 ## Quick Start
 
@@ -55,10 +56,10 @@ uv run friday serve --port 8000
 
 ## Usage
 
-Start a chat:
+Start an interactive chat:
 
 ```bash
-uv run friday
+uv run friday chat
 ```
 
 Start the browser interface:
@@ -77,6 +78,7 @@ uv run friday --help
 uv run friday ask "What should I focus on today?"
 uv run friday model
 uv run friday memory
+uv run friday tool list
 uv run friday agents list
 uv run friday connect
 uv run friday doctor
@@ -114,16 +116,17 @@ npm run build
 
 ## Project Layout
 
-- `src/` - Friday Python backend and CLI
-- `frontend/` — browser interface
+- `src/` — Friday Python backend and CLI
+- `frontend/` — browser and desktop interface
 - `rust/` — native performance extensions
 - `configs/` — assistant and persona configuration
-- `tests/` — automated tests
+- `tests/` — automated test suite
 - `docs/` — project documentation
 
 ## License
 
-Friday is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for
-details.
+Friday is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
 
-Copyright (c) 2026 Sahil Yadav. All rights reserved.
+---
+
+**Copyright &copy; 2026 Sahil Yadav. All rights reserved.**

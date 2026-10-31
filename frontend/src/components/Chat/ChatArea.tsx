@@ -19,6 +19,7 @@ function getGreeting(): string {
 
 export function ChatArea() {
   const activeId = useAppStore((s) => s.activeId);
+  const selectedModel = useAppStore((s) => s.selectedModel);
   const messages = useAppStore((s) => s.messages);
   const streamState = useAppStore((s) => s.streamState);
   const systemPanelOpen = useAppStore((s) => s.systemPanelOpen);
@@ -138,23 +139,42 @@ export function ChatArea() {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Toggle bar */}
-      <div className="flex items-center justify-end px-4 py-2 shrink-0 gap-2">
-        <ApprovalBell embedded />
+      {/* Conversation header */}
+      <div className="chat-header flex items-center justify-between px-5 md:px-7 py-3 shrink-0 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative w-8 h-8 rounded-xl overflow-hidden ring-1 ring-orange-400/50 shadow-sm shrink-0">
+            <img src="/friday-core.jpg" alt="Friday" className="w-full h-full object-cover" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-sm font-semibold tracking-tight" style={{ color: 'var(--color-text)' }}>Friday</h1>
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium" style={{ color: 'var(--color-success)' }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'currentColor', boxShadow: '0 0 8px currentColor' }} />
+                Online
+              </span>
+            </div>
+            <p className="truncate text-[11px]" style={{ color: 'var(--color-text-tertiary)' }}>
+              {selectedModel || 'Personal intelligence workspace'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <ApprovalBell embedded />
         <button
           onClick={toggleSystemPanel}
-          className="p-1.5 rounded-lg transition-colors cursor-pointer hover:bg-white/5"
-          style={{ color: 'var(--color-text-tertiary)' }}
+          className="toolbar-button p-2 rounded-xl transition-colors cursor-pointer"
+          style={{ color: systemPanelOpen ? 'var(--color-accent)' : 'var(--color-text-tertiary)' }}
           title={`${systemPanelOpen ? 'Hide' : 'Show'} system panel (${navigator.platform.includes('Mac') ? '⌘' : 'Ctrl'}+I)`}
         >
-          <PanelIcon size={16} />
+          <PanelIcon size={17} />
         </button>
+        </div>
       </div>
 
       {/* Data sources banner */}
       {hasConnectedSources === false && !bannerDismissed && (
         <div
-          className="mx-4 mb-2 flex items-center gap-3 px-4 py-3 rounded-lg text-sm shrink-0"
+          className="mx-auto mt-3 mb-1 flex items-center gap-3 px-4 py-3 rounded-2xl text-sm shrink-0 w-[calc(100%-2rem)] max-w-[var(--chat-max-width)]"
           style={{
             background: 'var(--color-accent-subtle)',
             border: '1px solid var(--color-border)',
@@ -186,36 +206,36 @@ export function ChatArea() {
         className="flex-1 overflow-y-auto"
       >
         {isEmpty ? (
-          <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+          <div className="empty-state flex flex-col items-center justify-center h-full px-6 text-center">
             {/* Glowing F.R.I.D.A.Y. Arc Reactor Core */}
             <div
-              className="relative mb-5 flex items-center justify-center group cursor-pointer"
+              className="relative mb-7 flex items-center justify-center group cursor-pointer"
               onClick={() => setVoiceModalOpen(true)}
               title="Launch F.R.I.D.A.Y. Voice Assistant (Talk with Friday)"
             >
-              <div className="absolute -inset-4 rounded-full bg-gradient-to-tr from-orange-500/25 via-amber-500/35 to-cyan-500/25 blur-xl group-hover:blur-2xl transition-all animate-pulse" />
+              <div className="absolute -inset-8 rounded-full bg-gradient-to-tr from-orange-500/20 via-amber-500/20 to-cyan-500/15 blur-2xl group-hover:blur-3xl transition-all" />
               <img
                 src="/friday-core.jpg"
                 alt="F.R.I.D.A.Y. HUD Core"
-                className="relative w-28 h-28 md:w-32 md:h-32 rounded-full object-cover shadow-2xl ring-2 ring-orange-500/70 shadow-orange-500/30 transition-transform duration-700 group-hover:scale-110"
+                className="relative w-24 h-24 md:w-28 md:h-28 rounded-[2rem] object-cover shadow-2xl ring-1 ring-orange-400/70 shadow-orange-500/20 transition-transform duration-500 group-hover:scale-105"
               />
               <span className="absolute -bottom-2.5 px-3 py-0.5 rounded-full text-[10px] font-mono tracking-widest bg-black/85 text-orange-400 border border-orange-500/50 backdrop-blur-md uppercase shadow-md group-hover:bg-orange-500 group-hover:text-black transition-all">
                 VOICE CORE • TALK
               </span>
             </div>
 
-            <h2 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--color-text)' }}>
+            <h2 className="text-3xl md:text-4xl font-semibold tracking-[-0.04em] mb-3" style={{ color: 'var(--color-text)' }}>
               {getGreeting()}, {firstName}!
             </h2>
-            <p className="text-sm max-w-md mb-6 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
-              I am <span className="font-semibold text-orange-500 dark:text-orange-400">F.R.I.D.A.Y.</span>, your personal AI assistant. All neural systems are online and calibrated. How can I assist you today, sir?
+            <p className="text-sm md:text-[15px] max-w-lg mb-8 leading-relaxed" style={{ color: 'var(--color-text-secondary)' }}>
+              Your personal AI workspace is ready. Ask a question, explore your connected data, or start a focused research task.
             </p>
 
             {/* Quick action hints */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={() => navigate('/data-sources')}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs cursor-pointer transition-colors"
+                className="quick-action flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs cursor-pointer transition-colors"
                 style={{
                   background: 'var(--color-bg-secondary)',
                   border: '1px solid var(--color-border)',
@@ -229,7 +249,7 @@ export function ChatArea() {
               </button>
               <button
                 onClick={() => { navigate('/data-sources'); setTimeout(() => window.dispatchEvent(new CustomEvent('switch-tab', { detail: 'messaging' })), 100); }}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs cursor-pointer transition-colors"
+                className="quick-action flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs cursor-pointer transition-colors"
                 style={{
                   background: 'var(--color-bg-secondary)',
                   border: '1px solid var(--color-border)',
@@ -244,7 +264,7 @@ export function ChatArea() {
             </div>
           </div>
         ) : (
-          <div className="max-w-[var(--chat-max-width)] mx-auto px-4 py-6">
+          <div className="max-w-[var(--chat-max-width)] mx-auto px-5 md:px-8 py-8">
             {messages.map((msg, i) => {
               const isLastAssistant =
                 i === messages.length - 1 && msg.role === 'assistant';
