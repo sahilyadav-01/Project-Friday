@@ -1,65 +1,55 @@
 <div align="center">
-  <img alt="Friday logo" src="frontend/public/pwa-192x192.png" width="160">
+  <img alt="Friday logo" src="frontend/public/pwa-192x192.png" width="144">
   <h1>Friday</h1>
-  <p><strong>Personal AI assistant for your computer.</strong></p>
-  <p>Built and maintained by <strong>Sahil Yadav</strong> &middot; Copyright &copy; 2026 Sahil Yadav</p>
+  <p><strong>Your private AI assistant for Windows, macOS, and Linux.</strong></p>
+  <p>Desktop app · Local-first · Voice enabled · Extensible</p>
 </div>
 
-Friday is a local-first personal AI assistant with a command-line interface and
-a browser-based graphical interface. It supports chat, local models, custom
-inference servers, agents, memory, data-source connections, scheduled work,
-and developer workflows.
+Friday is a local-first personal AI assistant built for the desktop. It combines
+a native Tauri application, a Python intelligence backend, local or cloud AI
+models, voice interaction, memory, agents, and personal data connections in one
+workspace.
 
-## Features
+## Highlights
 
-- **Multi-Engine Intelligence**: Chat with local models (Ollama, vLLM, llama.cpp) or cloud providers (ChatGPT/OpenAI, Google Gemini, Claude).
-- **Voice & Speech**: Real-time voice interaction with local Speech-to-Text (`faster-whisper`) and neural Text-to-Speech (`edge-tts` & `kokoro`).
-- **Graphical Web Dashboard**: Modern browser interface with chat, model picker, and settings (`friday gui`).
-- **Autonomous Agents & Custom Tools**: Create and run agents with extensible tools (`system_status`, `calculator`, `web_search`, `file_read`, etc.).
-- **Memory & Personal Data**: Connect personal data sources with persistent memory store and context search.
-- **Diagnostic System Health**: One-command diagnostic checks with `friday doctor`.
-- **Privacy First**: Keeps configuration and assistant data local on your device.
+- **Native desktop app** — a focused Tauri window, system tray support, global
+  shortcuts, notifications, autostart, and a compact voice overlay.
+- **Local or cloud models** — use Ollama, vLLM, llama.cpp, LM Studio, OpenAI,
+  Gemini, Claude, or another compatible inference server.
+- **Voice interaction** — local speech-to-text and neural text-to-speech.
+- **Agents and tools** — run tool-using agents, scheduled work, and custom
+  workflows.
+- **Memory and connected data** — search your personal sources and preserve
+  useful context locally.
+- **Privacy first** — configuration, credentials, conversations, and memory stay
+  on your computer by default.
+- **Developer friendly** — CLI, OpenAI-compatible API, browser UI, Python SDK,
+  and native Rust extensions.
 
 ## Requirements
 
-- Python 3.10 to 3.13
+### Core
+
+- Python 3.10–3.13
 - [uv](https://docs.astral.sh/uv/)
-- Node.js 22 or newer for the browser GUI
-- Ollama or another configured inference server / cloud API keys
+- Ollama, a compatible inference server, or cloud API keys
 
-## Quick Start
+### Desktop development
 
-From the project directory:
+- Node.js 22 or newer
+- Rust stable (`rustup`, `rustc`, and `cargo`)
+- Platform prerequisites required by
+  [Tauri 2](https://v2.tauri.app/start/prerequisites/)
+- Windows: WebView2 and Microsoft C++ Build Tools
+
+## Quick start
+
+Install the backend and initialize Friday:
 
 ```bash
-uv sync
-```
-
-Initialize Friday and check the installation:
-
-```bash
+uv sync --extra server --extra desktop
 uv run friday init
 uv run friday doctor
-```
-
-Start a local chat:
-
-```bash
-uv run friday ask "What's on my calendar today?"
-```
-
-Expose an OpenAI-compatible local API:
-
-```bash
-uv run friday serve --port 8000
-```
-
-## Usage
-
-Start an interactive chat:
-
-```bash
-uv run friday chat
 ```
 
 Start the browser interface:
@@ -68,29 +58,56 @@ Start the browser interface:
 uv run friday gui
 ```
 
-Desktop builds are available on the
-[GitHub Releases page](https://github.com/open-jarvis/OpenJarvis/releases).
+Start an interactive terminal chat:
 
-Useful commands:
+```bash
+uv run friday chat
+```
+
+## Desktop app
+
+Install frontend dependencies once:
+
+```bash
+cd frontend
+npm install
+```
+
+Run Friday as a native desktop application in development mode:
+
+```bash
+npm run tauri dev
+```
+
+Create a release build and platform installer:
+
+```bash
+npm run tauri build
+```
+
+On Windows, Tauri writes the executable and installers under:
+
+```text
+frontend/src-tauri/target/release/
+frontend/src-tauri/target/release/bundle/msi/
+frontend/src-tauri/target/release/bundle/nsis/
+```
+
+The desktop app can locate the source checkout automatically. Set
+`OPENJARVIS_ROOT` to the repository path when using a non-standard checkout
+location.
+
+## CLI and API
 
 ```bash
 uv run friday --help
 uv run friday ask "What should I focus on today?"
 uv run friday model
 uv run friday memory
-uv run friday tool list
 uv run friday agents list
 uv run friday connect
 uv run friday doctor
-```
-
-The GUI installs its frontend dependencies automatically when needed. To
-install them manually:
-
-```bash
-cd frontend
-npm install
-npm run dev
+uv run friday serve --port 8000
 ```
 
 ## Development
@@ -101,32 +118,41 @@ Install development dependencies:
 uv sync --extra server --extra desktop --extra dev
 ```
 
-Run the Python test suite:
+Run backend tests:
 
 ```bash
 uv run pytest tests/ -v
 ```
 
-Build the frontend:
+Run frontend tests and create a production web build:
 
 ```bash
 cd frontend
+npm test
 npm run build
 ```
 
-## Project Layout
+Format and validate the native desktop crate:
+
+```bash
+cd frontend/src-tauri
+cargo fmt --check
+cargo test
+```
+
+## Project layout
 
 - `src/` — Friday Python backend and CLI
-- `frontend/` — browser and desktop interface
-- `rust/` — native performance extensions
+- `frontend/` — React browser UI and Tauri desktop application
+- `frontend/src-tauri/` — native desktop shell and platform integration
+- `rust/` — native Python performance extensions
 - `configs/` — assistant and persona configuration
 - `tests/` — automated test suite
-- `docs/` — project documentation
+- `docs/` — user and developer documentation
+- `deploy/` — platform deployment helpers
 
 ## License
 
-Friday is licensed under the Apache 2.0 License. See [LICENSE](LICENSE) for details.
+Friday is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 
----
-
-**Copyright &copy; 2026 Sahil Yadav. All rights reserved.**
+Copyright © 2026 Sahil Yadav.
