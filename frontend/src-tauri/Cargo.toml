@@ -21,7 +21,9 @@ tauri-plugin-process = "2"
 tauri-plugin-dialog = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-reqwest = { version = "0.13", features = ["json", "multipart"] }
+# Keep the updater's ring-backed rustls provider instead of reqwest's default
+# AWS-LC provider. This avoids requiring NASM for ordinary Windows builds.
+reqwest = { version = "0.13", default-features = false, features = ["json", "multipart", "rustls-no-provider"] }
 tokio = { version = "1", features = ["full"] }
 
 # Cloud API keys are stored in the OS credential store via `keyring`. keyring v3
