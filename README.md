@@ -155,4 +155,25 @@ cargo test
 
 Friday is licensed under the Apache License 2.0. See [LICENSE](LICENSE).
 
-Copyright © 2026 Sahil Yadav.
+## Privacy Policy & Terms of Service
+
+### Privacy Policy
+
+Friday is built with a **privacy-first, local-first architecture**:
+
+- **Local Storage by Default**: Your conversations, vector memories, persona settings, credentials, and logs remain strictly on your local device (stored under `~/.openjarvis/`). Friday does not collect, track, or sell your personal data.
+- **Cloud Inference**: When you choose to use third-party cloud model providers (such as OpenAI ChatGPT, Google Gemini, or Anthropic Claude) using your own API keys, prompts are transmitted directly from your machine to the respective provider under their own terms and privacy policies.
+- **Voice & Audio Processing**: Local Speech-to-Text (`faster-whisper`) and Text-to-Speech engines process audio on-device. Audio recordings and microphone streams are not uploaded to external servers unless an external cloud TTS/STT provider is explicitly configured.
+- **Security & Credentials**: API keys, tokens, and data-source secrets are stored locally with restricted filesystem permissions and are never exposed or transmitted to any unauthorized party.
+
+### Terms of Service
+
+- **License & Use**: Friday is open-source software provided under the [Apache License 2.0](LICENSE). You are granted permission to use, copy, modify, and distribute the software subject to the terms of the Apache 2.0 License.
+- **Provided "As-Is"**: Friday is provided "as is" and without warranties of any kind, either express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
+- **Agent & Tool Execution**: Friday includes agentic capabilities that can execute shell commands, read/write files, and perform network requests. You are solely responsible for reviewing agent actions, monitoring tool approvals, and verifying AI-generated outputs.
+- **Limitation of Liability**: To the maximum extent permitted by applicable law, in no event shall the author (Sahil Yadav) or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including loss of data, system downtime, or computer failure) arising out of the use of this software.
+- **Third-Party Compliance**: You agree to comply with all applicable laws and the terms of service of any third-party APIs, model providers, or platforms that you connect to Friday.
+
+---
+
+Copyright © 2026 Sahil Yadav. All rights reserved.
